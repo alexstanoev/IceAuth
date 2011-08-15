@@ -483,7 +483,7 @@ public class IceAuth extends JavaPlugin {
 				try {
 					Connection connection = this.manageMySQL.getConnection();
 					PreparedStatement regQ = connection.prepareStatement("UPDATE "+tableName+" SET " + passField + " = ? WHERE " + userField + " = ?");
-					regQ.setString(1, password);
+					regQ.setString(1, getMD5(password));
 					regQ.setString(2, player.getName());
 					regQ.executeUpdate();
 
