@@ -20,9 +20,9 @@ public class PlayerThread implements Runnable {
 			threadRuns++;
 			if(threadRuns == 11) {
 				threadRuns = 0;
-				this.parent.tpPlayers(true);
+				parent.tpPlayers(true);
 			} else {
-				this.parent.tpPlayers(false);
+				parent.tpPlayers(false);
 			}
 		}
 	}

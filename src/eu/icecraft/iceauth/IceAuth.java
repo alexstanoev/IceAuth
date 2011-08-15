@@ -117,8 +117,6 @@ public class IceAuth extends JavaPlugin {
 		}
 		conf.load();
 
-		// TODO: auto configuration
-
 		this.MySQL = conf.getBoolean("mysql.use", false);
 		this.dbHost = conf.getString("mysql.dbHost");
 		this.dbUser = conf.getString("mysql.dbUser");
@@ -152,6 +150,9 @@ public class IceAuth extends JavaPlugin {
 				} else {
 					this.log.severe(this.logPrefix + "MySQL connection failed. Defaulting to SQLite");
 					this.MySQL = false;
+					this.tableName = "auth";
+					this.userField = "username";
+					this.passField = "password";
 				}
 			} catch (MalformedURLException e) {
 				e.printStackTrace();
@@ -165,12 +166,16 @@ public class IceAuth extends JavaPlugin {
 
 			this.manageSQLite = new sqlCore(this.log, this.logPrefix, "IceAuth", this.getDataFolder().getPath());
 
+			this.tableName = "auth";
+			this.userField = "username";
+			this.passField = "password";
+			
 			this.manageSQLite.initialize();
 
 			if (!this.manageSQLite.checkTable(tableName)) {
-				this.log.warning(this.logPrefix + "Table " + tableName + " does not exist! Disabling");
-				pm.disablePlugin(this);
-				// TODO: Fix
+
+				this.manageSQLite.createTable("CREATE TABLE auth (id INT AUTO_INCREMENT PRIMARY_KEY, username VARCHAR(30), password VARCHAR(50));");
+
 			}
 
 		}
@@ -344,7 +349,7 @@ public class IceAuth extends JavaPlugin {
 			player.sendMessage(ChatColor.RED + "Use /login <password> to log in!");
 		}
 	}
-	
+
 	public String getMD5(String message) {
 		byte[] digest;
 		md5.reset();
@@ -359,108 +364,120 @@ public class IceAuth extends JavaPlugin {
 
 		ResultSet result = null;
 
+		Connection connection = null;
+
 		if (this.MySQL) {
 			try {
-				Connection connection = this.manageMySQL.getConnection();
-				PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) AS c FROM "+tableName+" WHERE " + userField + " = ?");
-				regQ.setString(1, name);
-				result = regQ.executeQuery();
-				while(result.next()) {
-					if(result.getInt("c") > 0) {
-						return true;
-					} else {
-						return false;
-					}
-				}
+				connection = this.manageMySQL.getConnection();
 			} catch (MalformedURLException e) {
 				e.printStackTrace();
 			} catch (InstantiationException e) {
 				e.printStackTrace();
 			} catch (IllegalAccessException e) {
 				e.printStackTrace();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			} finally {
-				try {
-					result.close();
-				} catch (SQLException e) {
-					e.printStackTrace();
+			}
+		} else {
+			connection = this.manageSQLite.getConnection();
+		}
+
+		try {
+
+			PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) AS c FROM "+tableName+" WHERE " + userField + " = ?");
+			regQ.setString(1, name);
+			result = regQ.executeQuery();
+			while(result.next()) {
+				if(result.getInt("c") > 0) {
+					return true;
+				} else {
+					return false;
 				}
 			}
 
-		} else {
-			//result = this.manageSQLite.sqlQuery(query);
-			// TODO: SQLite
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				result.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
 		}
 
 		return false;
 	}
 
-	public boolean checkLogin(String name, String password) {
+	public boolean checkLogin(String name, String password) { // fails at sqlite
 
 		ResultSet result = null;
+		Connection connection = null;
 
 		if (this.MySQL) {
 			try {
-				Connection connection = this.manageMySQL.getConnection();
-				PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) AS c FROM "+tableName+" WHERE " + userField + " = ? && "+passField+" = ?");
-				regQ.setString(1, name);
-				regQ.setString(2, getMD5(password));
-				result = regQ.executeQuery();
-				while(result.next()) {
-					if(result.getInt("c") > 0) {
-						return true;
-					} else {
-						return false;
-					}
-				}
+				connection = this.manageMySQL.getConnection();
 			} catch (MalformedURLException e) {
 				e.printStackTrace();
 			} catch (InstantiationException e) {
 				e.printStackTrace();
 			} catch (IllegalAccessException e) {
 				e.printStackTrace();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			} finally {
-				try {
-					result.close();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
 			}
 		} else {
-			//result = this.manageSQLite.sqlQuery(query);
-			// TODO: SQLite
+			connection = this.manageSQLite.getConnection();
 		}
+		try {
+			PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) AS c FROM "+tableName+" WHERE " + userField + " = ? && "+passField+" = ?");
+			regQ.setString(1, name);
+			regQ.setString(2, getMD5(password));
+			result = regQ.executeQuery();
+			while(result.next()) {
+				if(result.getInt("c") > 0) {
+					return true;
+				} else {
+					return false;
+				}
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				result.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+
 
 		return false;
 	}
 
 	public boolean register(String name, String password) {
 
+		Connection connection = null;
+
 		if (this.MySQL) {
 			try {
-				Connection connection = this.manageMySQL.getConnection();
-				PreparedStatement regQ = connection.prepareStatement("INSERT INTO "+tableName+" ("+userField+", "+passField+") VALUES(?,?)");
-				regQ.setString(1, name);
-				regQ.setString(2, getMD5(password));
-				regQ.executeUpdate();
-
-				return true;
-
+				connection = this.manageMySQL.getConnection();
 			} catch (MalformedURLException e) {
 				e.printStackTrace();
 			} catch (InstantiationException e) {
 				e.printStackTrace();
 			} catch (IllegalAccessException e) {
 				e.printStackTrace();
-			} catch (SQLException e) {
-				e.printStackTrace();
 			}
 		} else {
-			//result = this.manageSQLite.sqlQuery(query);
-			// TODO: SQLite
+			connection = this.manageSQLite.getConnection();
+		}
+		try {
+			PreparedStatement regQ = connection.prepareStatement("INSERT INTO "+tableName+" ("+userField+", "+passField+") VALUES(?,?)");
+			regQ.setString(1, name);
+			regQ.setString(2, getMD5(password));
+			regQ.executeUpdate();
+
+			return true;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 
 		return false;
@@ -470,30 +487,34 @@ public class IceAuth extends JavaPlugin {
 
 		if(checkLogin(player.getName(), oldpass)) {
 
+			Connection connection = null;
+
 			if (this.MySQL) {
 				try {
-					Connection connection = this.manageMySQL.getConnection();
-					PreparedStatement regQ = connection.prepareStatement("UPDATE "+tableName+" SET " + passField + " = ? WHERE " + userField + " = ?");
-					regQ.setString(1, getMD5(password));
-					regQ.setString(2, player.getName());
-					regQ.executeUpdate();
-
-					player.sendMessage(ChatColor.GREEN + "Password updated sucessfully!");
-
-					return true;
-
+					connection = this.manageMySQL.getConnection();
 				} catch (MalformedURLException e) {
 					e.printStackTrace();
 				} catch (InstantiationException e) {
 					e.printStackTrace();
 				} catch (IllegalAccessException e) {
 					e.printStackTrace();
-				} catch (SQLException e) {
-					e.printStackTrace();
 				}
 			} else {
-				//result = this.manageSQLite.sqlQuery(query);
-				// TODO: SQLite
+				connection = this.manageSQLite.getConnection();
+			}
+			try {
+
+				PreparedStatement regQ = connection.prepareStatement("UPDATE "+tableName+" SET " + passField + " = ? WHERE " + userField + " = ?");
+				regQ.setString(1, getMD5(password));
+				regQ.setString(2, player.getName());
+				regQ.executeUpdate();
+
+				player.sendMessage(ChatColor.GREEN + "Password updated sucessfully!");
+
+				return true;
+
+			} catch (SQLException e) {
+				e.printStackTrace();
 			}
 
 		} else {
@@ -504,7 +525,7 @@ public class IceAuth extends JavaPlugin {
 		return false;
 	}
 
-	public boolean tpPlayers(boolean msgLogin) {
+	public void tpPlayers(boolean msgLogin) {
 
 		Set<Player> ks = notLoggedIn.keySet();
 		for (Player player : ks) {
@@ -519,7 +540,6 @@ public class IceAuth extends JavaPlugin {
 
 		}
 
-		return true;
 	}
 
 }
