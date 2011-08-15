@@ -44,7 +44,7 @@ public class IceAuth extends JavaPlugin {
 	public String dbPass = null;
 	public String dbDatabase = null;
 	public String tableName;
-	
+
 	private ArrayList<Player> playersLoggedIn = new ArrayList<Player>();
 	private ArrayList<Player> notRegistered = new ArrayList<Player>();
 	//private ArrayList<Player> notLoggedIn = new ArrayList<Player>();
@@ -56,7 +56,7 @@ public class IceAuth extends JavaPlugin {
 	private String userField;
 	private String passField;
 	private MessageDigest md5;
-	
+
 
 	@Override
 	public void onDisable() {
@@ -346,7 +346,7 @@ public class IceAuth extends JavaPlugin {
 	public boolean checkUnReg(Player player) {
 		return notRegistered.contains(player);
 	}
-	
+
 	public void removePlayerCache(Player player) {
 		playersLoggedIn.remove(player);
 	}
@@ -528,7 +528,7 @@ public class IceAuth extends JavaPlugin {
 			Location pos = notLoggedIn.get(player);
 
 			player.teleport(pos);
-			
+
 			if(msgLogin) {
 				if(checkUnReg(player)) {
 					player.sendMessage(ChatColor.RED + "Use /register <password> to register!");
@@ -536,7 +536,7 @@ public class IceAuth extends JavaPlugin {
 					player.sendMessage(ChatColor.RED + "Use /login <password> to log in!");
 				}
 			}
-			
+
 		}
 
 		return true;

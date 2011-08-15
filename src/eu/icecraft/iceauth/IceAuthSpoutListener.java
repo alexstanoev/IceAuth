@@ -15,28 +15,14 @@ public class IceAuthSpoutListener extends InventoryListener {
 	@Override
 	public void onInventoryOpen(InventoryOpenEvent event) {
 		
-		System.out.println("inv open "+ event.getPlayer().getName());
-		
         if(event.isCancelled()) {
             return;
         }
 		
-		if(plugin.checkAuth(event.getPlayer())) {
+		if(!plugin.checkAuth(event.getPlayer())) {
 			event.setCancelled(true);
 		}
 		
 	}
-	
-	/*
-	@Override
-	public void onInventoryCraft(InventoryOpenEvent event) {
-	
-	}
-	
-	@Override
-	public void onInventoryPlayerClick(InventoryPlayerClickEvent event) {
-		
-		
-	}
-	*/
+
 }

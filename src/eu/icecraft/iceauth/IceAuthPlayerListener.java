@@ -15,7 +15,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 
 	@Override
 	public void onPlayerLogin(PlayerLoginEvent event) {
-		
+
 		if(event.getResult() != Result.ALLOWED || event.getPlayer() == null) {
 			return;
 		}
@@ -39,7 +39,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 			event.disallow(Result.KICK_OTHER, "Name contained disallowed characters or was Player");
 		}
 	}
-	
+
 	@Override
 	public void onPlayerKick(PlayerKickEvent event) {
 		if(event.isCancelled() || event.getPlayer() == null) {
@@ -60,58 +60,17 @@ public class IceAuthPlayerListener extends PlayerListener {
 			return;
 		}
 		Player player = event.getPlayer();
-		
+
 		boolean regged = plugin.isRegistered(player.getName());
-		
+
 		plugin.addPlayerNotLoggedIn(player, player.getLocation(), regged);
-		
+
 		if(regged) {
-			
 			player.sendMessage(ChatColor.RED + "Use /login <password> to log in!");
-			
 		} else {
-			
 			player.sendMessage(ChatColor.RED + "Use /register <password> to register!");
-			
 		}
-		
-		/*
-		if(!plugin.getPlayercache().isPlayerRegistered(player)) {
-			if(plugin.getSettings().ForceRegistration()) {
-				player.sendMessage(plugin.getMessages().getMessage(
-						"JoinMessage.ForceRegistration"));
-				player.sendMessage(plugin.getMessages().getMessage(
-						"JoinMessage.Command"));
-			} else {
-				player.sendMessage(plugin.getMessages().getMessage(
-						"JoinMessage.FreeRegistration"));
-				player.sendMessage(plugin.getMessages().getMessage(
-						"JoinMessage.Command"));
-			}
-			if(!plugin.getSettings().WalkAroundSpawnEnabled()) {
-				player.teleport(player.getWorld().getSpawnLocation());
-			}
-			return;
-		}
-		//plugin.playercache.setPlayerAuthenticated(player, true);
-		// --The following section is only executed for registered players!--
 
-		// Session Login
-		if(plugin.getSettings().LoginSessionsEnabled()) {
-
-			if(plugin.getSessionhandler().isSessionValid(player)) {
-				// perform session login
-				plugin.performPlayerLogin(player);
-				player.sendMessage(plugin.getMessages().getMessage(
-						"Sessions.Hint"));
-				MessageHandler.showInfo(
-						"Player " + player.getName()
-						+ " was automatically logged in by session.");
-				return;
-			}
-		}
-		*/
-		
 	}
 
 	@Override
@@ -207,7 +166,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 			event.setCancelled(true);
 		}
 	}
-	
+
 	@Override
 	public void onPlayerInteract(PlayerInteractEvent event) {
 		if(event.isCancelled() || event.getPlayer() == null) {
