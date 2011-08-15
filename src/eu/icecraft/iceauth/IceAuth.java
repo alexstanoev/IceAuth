@@ -74,7 +74,8 @@ public class IceAuth extends JavaPlugin {
 	public void onEnable() {
 
 		PluginManager pm = getServer().getPluginManager();
-
+		
+		// TODO: Permissions
 		/*
 		Plugin perms = pm.getPlugin("Permissions");
 
@@ -284,18 +285,15 @@ public class IceAuth extends JavaPlugin {
 			if(!(sender instanceof Player)) {
 				return false;
 			}
-			//Player player = (Player) sender;
-			/*
-			if(!settings.ChangePasswordEnabled()) {
-				player.sendMessage("Changing passwords is currently disabled!");
+		
+			Player player = (Player) sender;
+			
+			if(!isRegistered(player.getName())) {
+				player.sendMessage(ChatColor.RED + "You aren't registered!");
 				return false;
 			}
-			if(!playercache.isPlayerRegistered(player)) {
-				player.sendMessage(messages.getMessage("Error.NotRegistered"));
-				return false;
-			}
-			if(!playercache.isPlayerAuthenticated(player)) {
-				player.sendMessage(messages.getMessage("Error.NotLogged"));
+			if(!checkAuth(player)) {
+				player.sendMessage(ChatColor.RED + "You aren't logged in!");
 				return false;
 			}
 			if(args.length != 2) {
@@ -303,35 +301,16 @@ public class IceAuth extends JavaPlugin {
 						"Usage: /changepassword <oldpassword> <newpassword>");
 				return false;
 			}
-			if(!comparePassword(args[0],
-					data.loadHash(player.getName()))) {
-				player.sendMessage(messages.getMessage("Error.WrongPassword"));
-				return false;
-			}
-
-			String salt = Long.toHexString(
-					Double.doubleToLongBits(Math.random()));
-			boolean executed = data.updateAuth(player.getName(), pws.
-					getSaltedHash(args[1], salt));
-
-			if(!executed) {
-				player.sendMessage(messages.getMessage("Error.DatasourceError"));
-				MessageHandler.showError(
-						"Failed to update an auth due to an error in the datasource!");
-				return false;
-			}
-
-			player.sendMessage(messages.getMessage(
-					"Command.ChangePasswordResponse"));
-			MessageHandler.showInfo("Player " + player.getName()
-					+ " changed his password!");
+			
+			changePassword(args[0], args[1], player);
+			return true;
+			
 		}
-			 */
-			// TODO
-		}
+		
 		return false;
-
+		
 	}
+
 
 	public ResultSet query(String query) {
 
@@ -496,35 +475,39 @@ public class IceAuth extends JavaPlugin {
 		return false;
 	}
 
-	public boolean changePassword(String oldpass, String password) {
-		// TODO: change password
-		ResultSet result = null;
+	public boolean changePassword(String oldpass, String password, Player player) {
 
-		if (this.MySQL) {
-			try {
-				Connection connection = this.manageMySQL.getConnection();
-				PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) FROM "+tableName+" WHERE " + userField + " = ? && "+passField+" = ?");
-				regQ.setString(1, oldpass);
-				//regQ.setString(2, getMD5(password));
-				result = regQ.executeQuery();
-				if(result.getInt(0) > 0) {
+		if(checkLogin(player.getName(), oldpass)) {
+
+			if (this.MySQL) {
+				try {
+					Connection connection = this.manageMySQL.getConnection();
+					PreparedStatement regQ = connection.prepareStatement("UPDATE "+tableName+" SET " + passField + " = ? WHERE " + userField + " = ?");
+					regQ.setString(1, password);
+					regQ.setString(2, player.getName());
+					regQ.executeUpdate();
+					
+					player.sendMessage(ChatColor.GREEN + "Password updated sucessfully!");
+					
 					return true;
-				} else {
-					return false;
+					
+				} catch (MalformedURLException e) {
+					e.printStackTrace();
+				} catch (InstantiationException e) {
+					e.printStackTrace();
+				} catch (IllegalAccessException e) {
+					e.printStackTrace();
+				} catch (SQLException e) {
+					e.printStackTrace();
 				}
-
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
-			} catch (InstantiationException e) {
-				e.printStackTrace();
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-			} catch (SQLException e) {
-				e.printStackTrace();
+			} else {
+				//result = this.manageSQLite.sqlQuery(query);
+				// TODO: SQLite
 			}
+
 		} else {
-			//result = this.manageSQLite.sqlQuery(query);
-			// TODO: SQLite
+			player.sendMessage(ChatColor.RED + "Wrong password!");
+			return true;
 		}
 
 		return false;
