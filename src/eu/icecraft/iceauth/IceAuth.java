@@ -220,7 +220,7 @@ public class IceAuth extends JavaPlugin {
 			}
 
 			Player player = (Player) sender;
-			if(isRegistered(player.getName())) {
+			if(!checkUnReg(player)) {
 				player.sendMessage(ChatColor.RED + "Already registered.");
 				return false;
 			}
@@ -259,7 +259,7 @@ public class IceAuth extends JavaPlugin {
 			String playername = player.getName();
 			String password = args[0];
 
-			if(!isRegistered(player.getName())) {
+			if(checkUnReg(player)) {
 				player.sendMessage(ChatColor.RED + "You need to register first!");
 				return false;
 			}
@@ -289,7 +289,7 @@ public class IceAuth extends JavaPlugin {
 
 			Player player = (Player) sender;
 
-			if(!isRegistered(player.getName())) {
+			if(checkUnReg(player)) {
 				player.sendMessage(ChatColor.RED + "You aren't registered!");
 				return false;
 			}
@@ -298,8 +298,7 @@ public class IceAuth extends JavaPlugin {
 				return false;
 			}
 			if(args.length != 2) {
-				player.sendMessage(
-						"Usage: /changepassword <oldpassword> <newpassword>");
+				player.sendMessage("Usage: /changepassword <oldpassword> <newpassword>");
 				return false;
 			}
 
@@ -309,29 +308,6 @@ public class IceAuth extends JavaPlugin {
 		}
 
 		return false;
-
-	}
-
-
-	public ResultSet query(String query) {
-
-		ResultSet result = null;
-
-		if (this.MySQL) {
-			try {
-				result = this.manageMySQL.sqlQuery(query);
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
-			} catch (InstantiationException e) {
-				e.printStackTrace();
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-			}
-		} else {
-			result = this.manageSQLite.sqlQuery(query);
-		}
-
-		return result;
 
 	}
 
