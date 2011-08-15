@@ -1,6 +1,5 @@
 package eu.icecraft.iceauth;
 
-import org.bukkit.ChatColor;
 import org.bukkit.entity.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
@@ -64,11 +63,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 
 		plugin.addPlayerNotLoggedIn(player, player.getLocation(), regged);
 
-		if(regged) {
-			player.sendMessage(ChatColor.RED + "Use /login <password> to log in!");
-		} else {
-			player.sendMessage(ChatColor.RED + "Use /register <password> to register!");
-		}
+		plugin.msgPlayerLogin(player);
 
 	}
 
@@ -82,20 +77,6 @@ public class IceAuthPlayerListener extends PlayerListener {
 		plugin.removePlayerCache(player);
 
 	}
-
-	/*
-    @Override
-    public void onPlayerMove(PlayerMoveEvent event) {
-        if(event.isCancelled() || event.getPlayer() == null) {
-            return;
-        }
-        Player player = event.getPlayer();
-
-        if(!plugin.checkAuth(player)) {
-            event.setCancelled(true);
-        }
-    }
-	 */
 
 	@Override
 	public void onPlayerChat(PlayerChatEvent event) {
