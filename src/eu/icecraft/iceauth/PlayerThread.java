@@ -2,7 +2,8 @@ package eu.icecraft.iceauth;
 
 public class PlayerThread implements Runnable {
 	private IceAuth parent;
-
+	private int threadRuns = 0;
+	
 	public PlayerThread(IceAuth parent)
 	{
 		this.parent = parent;
@@ -15,7 +16,14 @@ public class PlayerThread implements Runnable {
 			} catch (InterruptedException ex) {
 				return;
 			}
-			this.parent.tpPlayers();
+			
+			threadRuns++;
+			if(threadRuns == 11) {
+				threadRuns = 0;
+				this.parent.tpPlayers(true);
+			} else {
+				this.parent.tpPlayers(false);
+			}
 		}
 	}
 }

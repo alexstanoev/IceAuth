@@ -60,10 +60,10 @@ public class IceAuthPlayerListener extends PlayerListener {
 			return;
 		}
 		Player player = event.getPlayer();
-
-		plugin.addPlayerNotLoggedIn(player, player.getLocation());
 		
 		boolean regged = plugin.isRegistered(player.getName());
+		
+		plugin.addPlayerNotLoggedIn(player, player.getLocation(), regged);
 		
 		if(regged) {
 			
@@ -218,4 +218,5 @@ public class IceAuthPlayerListener extends PlayerListener {
 			event.setCancelled(true);
 		}
 	}
+
 }

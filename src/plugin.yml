@@ -3,8 +3,7 @@ main: eu.icecraft.iceauth.IceAuth
 version: 1.0
 author:  illusion9
 description: Lightweight authorization plugin based on AuthMe
-softdepends:
-    - Spout
+softdepend: [Spout]
 commands:
     login:
         description: With this command a player can login!

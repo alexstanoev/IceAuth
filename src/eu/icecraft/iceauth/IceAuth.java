@@ -44,8 +44,9 @@ public class IceAuth extends JavaPlugin {
 	public String dbPass = null;
 	public String dbDatabase = null;
 	public String tableName;
-
+	
 	private ArrayList<Player> playersLoggedIn = new ArrayList<Player>();
+	private ArrayList<Player> notRegistered = new ArrayList<Player>();
 	//private ArrayList<Player> notLoggedIn = new ArrayList<Player>();
 	private Map<Player, Location> notLoggedIn = new HashMap<Player, Location>();
 	private boolean useSpout;
@@ -55,7 +56,7 @@ public class IceAuth extends JavaPlugin {
 	private String userField;
 	private String passField;
 	private MessageDigest md5;
-
+	
 
 	@Override
 	public void onDisable() {
@@ -342,16 +343,22 @@ public class IceAuth extends JavaPlugin {
 		return playersLoggedIn.contains(player);
 	}
 
+	public boolean checkUnReg(Player player) {
+		return notRegistered.contains(player);
+	}
+	
 	public void removePlayerCache(Player player) {
 		playersLoggedIn.remove(player);
 	}
 
-	public void addPlayerNotLoggedIn(Player player, Location loc) {
-		notLoggedIn.put(player, loc);	
+	public void addPlayerNotLoggedIn(Player player, Location loc, Boolean registered) {
+		notLoggedIn.put(player, loc);
+		if(!registered) notRegistered.add(player);
 	}
 
 	public void delPlayerNotLoggedIn(Player player) {
 		notLoggedIn.remove(player);	
+		if(notRegistered.contains(player)) notRegistered.remove(player);
 	}
 
 	public String getMD5(String message) {
@@ -513,7 +520,7 @@ public class IceAuth extends JavaPlugin {
 		return false;
 	}
 
-	public boolean tpPlayers() {
+	public boolean tpPlayers(boolean msgLogin) {
 
 		Set<Player> ks = notLoggedIn.keySet();
 		for (Player player : ks) {
@@ -521,6 +528,15 @@ public class IceAuth extends JavaPlugin {
 			Location pos = notLoggedIn.get(player);
 
 			player.teleport(pos);
+			
+			if(msgLogin) {
+				if(checkUnReg(player)) {
+					player.sendMessage(ChatColor.RED + "Use /register <password> to register!");
+				} else {
+					player.sendMessage(ChatColor.RED + "Use /login <password> to log in!");
+				}
+			}
+			
 		}
 
 		return true;
