@@ -74,7 +74,7 @@ public class IceAuth extends JavaPlugin {
 	public void onEnable() {
 
 		PluginManager pm = getServer().getPluginManager();
-		
+
 		// TODO: Permissions
 		/*
 		Plugin perms = pm.getPlugin("Permissions");
@@ -285,9 +285,9 @@ public class IceAuth extends JavaPlugin {
 			if(!(sender instanceof Player)) {
 				return false;
 			}
-		
+
 			Player player = (Player) sender;
-			
+
 			if(!isRegistered(player.getName())) {
 				player.sendMessage(ChatColor.RED + "You aren't registered!");
 				return false;
@@ -301,14 +301,14 @@ public class IceAuth extends JavaPlugin {
 						"Usage: /changepassword <oldpassword> <newpassword>");
 				return false;
 			}
-			
+
 			changePassword(args[0], args[1], player);
 			return true;
-			
+
 		}
-		
+
 		return false;
-		
+
 	}
 
 
@@ -486,11 +486,11 @@ public class IceAuth extends JavaPlugin {
 					regQ.setString(1, password);
 					regQ.setString(2, player.getName());
 					regQ.executeUpdate();
-					
+
 					player.sendMessage(ChatColor.GREEN + "Password updated sucessfully!");
-					
+
 					return true;
-					
+
 				} catch (MalformedURLException e) {
 					e.printStackTrace();
 				} catch (InstantiationException e) {
