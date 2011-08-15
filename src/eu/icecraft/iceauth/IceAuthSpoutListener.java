@@ -2,7 +2,6 @@ package eu.icecraft.iceauth;
 
 import org.getspout.spoutapi.event.inventory.InventoryListener;
 import org.getspout.spoutapi.event.inventory.InventoryOpenEvent;
-//import org.getspout.spoutapi.event.inventory.InventoryPlayerClickEvent;
 
 public class IceAuthSpoutListener extends InventoryListener {
 

@@ -337,6 +337,14 @@ public class IceAuth extends JavaPlugin {
 		if(notRegistered.contains(player)) notRegistered.remove(player);
 	}
 
+	public void msgPlayerLogin(Player player) {
+		if(checkUnReg(player)) {
+			player.sendMessage(ChatColor.RED + "Use /register <password> to register!");
+		} else {
+			player.sendMessage(ChatColor.RED + "Use /login <password> to log in!");
+		}
+	}
+	
 	public String getMD5(String message) {
 		byte[] digest;
 		md5.reset();
@@ -506,11 +514,7 @@ public class IceAuth extends JavaPlugin {
 			player.teleport(pos);
 
 			if(msgLogin) {
-				if(checkUnReg(player)) {
-					player.sendMessage(ChatColor.RED + "Use /register <password> to register!");
-				} else {
-					player.sendMessage(ChatColor.RED + "Use /login <password> to log in!");
-				}
+				msgPlayerLogin(player);
 			}
 
 		}

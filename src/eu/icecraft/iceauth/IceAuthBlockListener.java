@@ -9,31 +9,33 @@ public class IceAuthBlockListener extends BlockListener {
 
 	private final IceAuth plugin;
 
-    public IceAuthBlockListener(final IceAuth plugin) {
-        this.plugin = plugin;
-    }
+	public IceAuthBlockListener(final IceAuth plugin) {
+		this.plugin = plugin;
+	}
 
-    @Override
-    public void onBlockPlace(BlockPlaceEvent event) {
-        if(event.isCancelled()) {
-            return;
-        }
-        Player players = event.getPlayer();
-        if(!plugin.checkAuth(players)) {
-            event.setCancelled(true);
-        }
-    }
+	@Override
+	public void onBlockPlace(BlockPlaceEvent event) {
+		if(event.isCancelled()) {
+			return;
+		}
+		Player players = event.getPlayer();
+		if(!plugin.checkAuth(players)) {
+			plugin.msgPlayerLogin(players);
+			event.setCancelled(true);
+		}
+	}
 
-    @Override
-    public void onBlockBreak(BlockBreakEvent event) {
-        if(event.isCancelled()) {
-            return;
-        }
-        Player players = event.getPlayer();
+	@Override
+	public void onBlockBreak(BlockBreakEvent event) {
+		if(event.isCancelled()) {
+			return;
+		}
+		Player players = event.getPlayer();
 
-         if(!plugin.checkAuth(players)) {
-            event.setCancelled(true);
-        }
-    }
-	
+		if(!plugin.checkAuth(players)) {
+			plugin.msgPlayerLogin(players);
+			event.setCancelled(true);
+		}
+	}
+
 }

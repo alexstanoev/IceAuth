@@ -24,8 +24,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 		String playername = player.getName();
 
 		for(Player p : plugin.getServer().getOnlinePlayers()) {
-			// TODO: test
-			//System.out.println(p.getName() + " - " + event.getPlayer().getName());
+
 			if(p.getName().toLowerCase().equals(event.getPlayer().getName().toLowerCase()) && plugin.checkAuth(p)) {
 				event.disallow(Result.KICK_OTHER, "There's an user logged in with that name!");
 			}
@@ -106,6 +105,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 		Player player = event.getPlayer();
 
 		if(!plugin.checkAuth(player)) {
+			plugin.msgPlayerLogin(player);
 			event.setMessage("");
 			event.setCancelled(true);
 		}
@@ -134,13 +134,14 @@ public class IceAuthPlayerListener extends PlayerListener {
 		if(commandLabel.equalsIgnoreCase("/l")) {
 			return;
 		}
-
-		//BukkitContrib fix; Those faggots can not code and should be lined up and shot
-		if(event.getMessage().equals("/0.1.3") || event.getMessage().equals(
-				"/0.1.6") || event.getMessage().equals("/0.1.7")) {
-			return;
-		}
-
+		// Not sure this is needed
+		//if(event.getMessage().equals("/0.1.3") || event.getMessage().equals(
+		//		"/0.1.6") || event.getMessage().equals("/0.1.7")) {
+		//	return;
+		//}
+		
+		plugin.msgPlayerLogin(player);
+		
 		event.setMessage("/notloggedin");
 		event.setCancelled(true);
 	}
