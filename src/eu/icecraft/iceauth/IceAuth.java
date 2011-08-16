@@ -12,7 +12,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
+//import java.util.Set;
 import java.util.logging.Logger;
 
 import org.bukkit.ChatColor;
@@ -188,9 +188,9 @@ public class IceAuth extends JavaPlugin {
 		} catch(NoSuchAlgorithmException ex) {
 			ex.printStackTrace();
 		}
-		
+
 		nch = new NLICacheHandler(this);
-		
+
 		IceAuthPlayerListener playerListener = new IceAuthPlayerListener(this);
 		IceAuthBlockListener blockListener = new IceAuthBlockListener(this);
 		IceAuthEntityListener entityListener = new IceAuthEntityListener(this);
@@ -203,7 +203,6 @@ public class IceAuth extends JavaPlugin {
 
 		pm.registerEvent(Event.Type.PLAYER_COMMAND_PREPROCESS, playerListener, Priority.Highest, this);
 		pm.registerEvent(Event.Type.PLAYER_CHAT, playerListener, Priority.Highest, this);
-		//pm.registerEvent(Event.Type.PLAYER_MOVE, playerListener, Priority.Monitor, this); pm.registerEvent(Event.Type.PLAYER_LOGIN, playerListener, Priority.High, this);
 		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Low, this);
 		pm.registerEvent(Event.Type.PLAYER_LOGIN, playerListener, Priority.High, this);
 		pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
@@ -365,7 +364,7 @@ public class IceAuth extends JavaPlugin {
 		}
 	}
 
-	public void restoreInv(Player player) { // TODO: Serialize NLIData and save it
+	public void restoreInv(Player player) {
 		NLIData nli = notLoggedIn.get(player.getName());
 
 		ItemStack[] invstackbackup = nli.getInventory();
@@ -577,31 +576,34 @@ public class IceAuth extends JavaPlugin {
 
 	public void tpPlayers(boolean msgLogin) {
 
-		Set<String> ks = notLoggedIn.keySet();
-		for (String playerName : ks) {
+		//Set<String> ks = notLoggedIn.keySet();
+		//for (String playerName : ks) {
+		for (Player player : this.getServer().getOnlinePlayers()) {
+			
+			if(!checkAuth(player)) {
+				try {
 
-			try {
+					//Player player = this.getServer().getPlayer(playerName);
+					String playerName = player.getName();
+					NLIData nli = notLoggedIn.get(playerName);
+					Location pos = nli.getLoc();
 
-				Player player = this.getServer().getPlayer(playerName); // this.. TODO: Get that getPlayer loop out of here
-				NLIData nli = notLoggedIn.get(playerName);
-				Location pos = nli.getLoc();
+					if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 30) {
+						player.kickPlayer("Took too long to log in");
+						System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
+						continue;
+					}
 
-				if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 30) {
-					player.kickPlayer("Took too long to log in");
-					System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
-					continue;
+					player.teleport(pos);
+
+					if(msgLogin) {
+						msgPlayerLogin(player);
+					}
+
+				} catch(Exception ex) {
+					System.out.println("[IceAuth] Exception in thread caught - " + ex.getMessage()); // caught rare npe
 				}
-
-				player.teleport(pos);
-
-				if(msgLogin) {
-					msgPlayerLogin(player);
-				}
-
-			} catch(Exception ex) {
-				System.out.println("[IceAuth] Exception in thread caught - " + ex.getMessage()); // caught rare npe
 			}
-
 		}
 
 	}
@@ -618,7 +620,7 @@ public class IceAuth extends JavaPlugin {
 			this.inventory = inventory;
 			this.armour = armour;
 		}
-		
+
 		public NLIData(Location loc, int loggedSecs, ItemStack[] inventory, ItemStack[] armour) {
 			this.inventory = inventory;
 			this.armour = armour;
