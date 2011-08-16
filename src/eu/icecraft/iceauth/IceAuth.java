@@ -48,7 +48,8 @@ public class IceAuth extends JavaPlugin {
 	private ArrayList<Player> playersLoggedIn = new ArrayList<Player>();
 	private ArrayList<Player> notRegistered = new ArrayList<Player>();
 	//private ArrayList<Player> notLoggedIn = new ArrayList<Player>();
-	private Map<Player, Location> notLoggedIn = new HashMap<Player, Location>();
+	//private Map<Player, Location> notLoggedIn = new HashMap<Player, Location>();
+	private Map<Player, NLIData> notLoggedIn = new HashMap<Player, NLIData>();
 	private boolean useSpout;
 	//private Permissions perm;
 	//private boolean UseOP;
@@ -333,7 +334,9 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	public void addPlayerNotLoggedIn(Player player, Location loc, Boolean registered) {
-		notLoggedIn.put(player, loc);
+		NLIData nli = new NLIData(loc, (int) (System.currentTimeMillis() / 1000L));
+		notLoggedIn.put(player, nli);
+		
 		if(!registered) notRegistered.add(player);
 	}
 
@@ -530,8 +533,14 @@ public class IceAuth extends JavaPlugin {
 		Set<Player> ks = notLoggedIn.keySet();
 		for (Player player : ks) {
 
-			Location pos = notLoggedIn.get(player);
-
+			NLIData nli = notLoggedIn.get(player);
+			Location pos = nli.getLoc();
+			
+			if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 30) {
+				player.kickPlayer("Took to long to log in");
+				continue;
+			}
+			
 			player.teleport(pos);
 
 			if(msgLogin) {
@@ -542,4 +551,22 @@ public class IceAuth extends JavaPlugin {
 
 	}
 
+	public class NLIData {
+		private int loggedSecs;
+		private Location loc;
+
+		public NLIData(Location loc, int loggedSecs) {
+			this.loc = loc;
+			this.loggedSecs = loggedSecs;
+		}
+		
+		public Location getLoc() {
+			return this.loc;
+		}
+		
+		public int getLoggedSecs() {
+			return this.loggedSecs;
+		}
+	}
+	
 }

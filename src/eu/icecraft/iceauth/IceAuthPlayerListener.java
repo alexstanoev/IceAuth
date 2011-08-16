@@ -33,6 +33,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 		if((!playername.matches("[a-zA-Z0-9_?]*"))
 				|| (playername.length() > 16)
 				|| (playername.length() < 3)
+				|| (playername.equalsIgnoreCase("Notch")) // Enough Notch'es already!
 				|| (playername.equalsIgnoreCase("Player"))) {
 			event.disallow(Result.KICK_OTHER, "Name contained disallowed characters or was Player");
 		}
