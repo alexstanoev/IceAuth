@@ -45,11 +45,11 @@ public class IceAuth extends JavaPlugin {
 	public String dbDatabase = null;
 	public String tableName;
 
-	private ArrayList<Player> playersLoggedIn = new ArrayList<Player>();
-	private ArrayList<Player> notRegistered = new ArrayList<Player>();
+	private ArrayList<String> playersLoggedIn = new ArrayList<String>();
+	private ArrayList<String> notRegistered = new ArrayList<String>();
 	//private ArrayList<Player> notLoggedIn = new ArrayList<Player>();
 	//private Map<Player, Location> notLoggedIn = new HashMap<Player, Location>();
-	private Map<Player, NLIData> notLoggedIn = new HashMap<Player, NLIData>();
+	private Map<String, NLIData> notLoggedIn = new HashMap<String, NLIData>();
 	private boolean useSpout;
 	//private Permissions perm;
 	//private boolean UseOP;
@@ -318,7 +318,7 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	public void addAuthPlayer(Player player) {
-		playersLoggedIn.add(player);	
+		playersLoggedIn.add(player.getName());	
 	}
 
 	public boolean checkAuth(Player player) {
@@ -335,9 +335,9 @@ public class IceAuth extends JavaPlugin {
 
 	public void addPlayerNotLoggedIn(Player player, Location loc, Boolean registered) {
 		NLIData nli = new NLIData(loc, (int) (System.currentTimeMillis() / 1000L));
-		notLoggedIn.put(player, nli);
+		notLoggedIn.put(player.getName(), nli);
 		
-		if(!registered) notRegistered.add(player);
+		if(!registered) notRegistered.add(player.getName());
 	}
 
 	public void delPlayerNotLoggedIn(Player player) {
@@ -530,14 +530,15 @@ public class IceAuth extends JavaPlugin {
 
 	public void tpPlayers(boolean msgLogin) {
 
-		Set<Player> ks = notLoggedIn.keySet();
-		for (Player player : ks) {
+		Set<String> ks = notLoggedIn.keySet();
+		for (String playerName : ks) {
 
-			NLIData nli = notLoggedIn.get(player);
+			Player player = this.getServer().getPlayer(playerName);
+			NLIData nli = notLoggedIn.get(playerName);
 			Location pos = nli.getLoc();
 			
 			if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 30) {
-				player.kickPlayer("Took to long to log in");
+				player.kickPlayer("Took too long to log in");
 				continue;
 			}
 			
