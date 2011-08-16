@@ -170,7 +170,7 @@ public class IceAuth extends JavaPlugin {
 			this.tableName = "auth";
 			this.userField = "username";
 			this.passField = "password";
-			
+
 			this.manageSQLite.initialize();
 
 			if (!this.manageSQLite.checkTable(tableName)) {
@@ -330,19 +330,22 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	public void removePlayerCache(Player player) {
-		playersLoggedIn.remove(player);
+		String pName = player.getName();
+		playersLoggedIn.remove(pName);
+		notLoggedIn.remove(pName);	
+		notRegistered.remove(pName);
 	}
 
 	public void addPlayerNotLoggedIn(Player player, Location loc, Boolean registered) {
 		NLIData nli = new NLIData(loc, (int) (System.currentTimeMillis() / 1000L));
 		notLoggedIn.put(player.getName(), nli);
-		
+
 		if(!registered) notRegistered.add(player.getName());
 	}
 
 	public void delPlayerNotLoggedIn(Player player) {
-		notLoggedIn.remove(player);	
-		if(notRegistered.contains(player)) notRegistered.remove(player);
+		notLoggedIn.remove(player.getName());	
+		notRegistered.remove(player.getName());
 	}
 
 	public void msgPlayerLogin(Player player) {
@@ -533,19 +536,25 @@ public class IceAuth extends JavaPlugin {
 		Set<String> ks = notLoggedIn.keySet();
 		for (String playerName : ks) {
 
-			Player player = this.getServer().getPlayer(playerName);
-			NLIData nli = notLoggedIn.get(playerName);
-			Location pos = nli.getLoc();
-			
-			if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 30) {
-				player.kickPlayer("Took too long to log in");
-				continue;
-			}
-			
-			player.teleport(pos);
+			try {
 
-			if(msgLogin) {
-				msgPlayerLogin(player);
+				Player player = this.getServer().getPlayer(playerName);
+				NLIData nli = notLoggedIn.get(playerName);
+				Location pos = nli.getLoc();
+
+				if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 30) {
+					player.kickPlayer("Took too long to log in");
+					continue;
+				}
+
+				player.teleport(pos);
+
+				if(msgLogin) {
+					msgPlayerLogin(player);
+				}
+
+			} catch(Exception ex) {
+				System.out.println("[IceAuth] Exception in thread caught - " + ex.getMessage()); // caught rare npe
 			}
 
 		}
@@ -560,14 +569,14 @@ public class IceAuth extends JavaPlugin {
 			this.loc = loc;
 			this.loggedSecs = loggedSecs;
 		}
-		
+
 		public Location getLoc() {
 			return this.loc;
 		}
-		
+
 		public int getLoggedSecs() {
 			return this.loggedSecs;
 		}
 	}
-	
+
 }
