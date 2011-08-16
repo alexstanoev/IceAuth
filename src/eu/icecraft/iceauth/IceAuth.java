@@ -45,11 +45,10 @@ public class IceAuth extends JavaPlugin {
 	public String dbDatabase = null;
 	public String tableName;
 
-	private ArrayList<String> playersLoggedIn = new ArrayList<String>();
-	private ArrayList<String> notRegistered = new ArrayList<String>();
-	//private ArrayList<Player> notLoggedIn = new ArrayList<Player>();
-	//private Map<Player, Location> notLoggedIn = new HashMap<Player, Location>();
-	private Map<String, NLIData> notLoggedIn = new HashMap<String, NLIData>();
+	public ArrayList<String> playersLoggedIn = new ArrayList<String>();
+	public ArrayList<String> notRegistered = new ArrayList<String>();
+	public Map<String, NLIData> notLoggedIn = new HashMap<String, NLIData>();
+	
 	private boolean useSpout;
 	//private Permissions perm;
 	//private boolean UseOP;
@@ -57,7 +56,6 @@ public class IceAuth extends JavaPlugin {
 	private String userField;
 	private String passField;
 	private MessageDigest md5;
-
 
 	@Override
 	public void onDisable() {
@@ -209,6 +207,7 @@ public class IceAuth extends JavaPlugin {
 		pm.registerEvent(Event.Type.BLOCK_BREAK, blockListener, Priority.Highest, this);
 		pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.Highest, this);
 		pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.Highest, this);
+		pm.registerEvent(Event.Type.ENTITY_DEATH, entityListener, Priority.Highest, this);
 
 		thread = new Thread(new PlayerThread(this));
 		thread.start();
@@ -282,6 +281,7 @@ public class IceAuth extends JavaPlugin {
 				return true;
 			} else {
 				player.sendMessage(ChatColor.RED + "Wrong password!");
+				System.out.println("[IceAuth] Player "+player.getName()+" tried logging in with a wrong password!");
 				return false;
 			}
 
@@ -322,11 +322,11 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	public boolean checkAuth(Player player) {
-		return playersLoggedIn.contains(player);
+		return playersLoggedIn.contains(player.getName());
 	}
 
 	public boolean checkUnReg(Player player) {
-		return notRegistered.contains(player);
+		return notRegistered.contains(player.getName());
 	}
 
 	public void removePlayerCache(Player player) {
@@ -479,7 +479,9 @@ public class IceAuth extends JavaPlugin {
 			regQ.setString(1, name);
 			regQ.setString(2, getMD5(password));
 			regQ.executeUpdate();
-
+			
+			System.out.println("[IceAuth] Player "+name+" registered sucessfully.");
+			
 			return true;
 
 		} catch (SQLException e) {
@@ -516,7 +518,7 @@ public class IceAuth extends JavaPlugin {
 				regQ.executeUpdate();
 
 				player.sendMessage(ChatColor.GREEN + "Password updated sucessfully!");
-
+				System.out.println("[IceAuth] Player "+player.getName()+" changed his password!");
 				return true;
 
 			} catch (SQLException e) {
@@ -525,6 +527,7 @@ public class IceAuth extends JavaPlugin {
 
 		} else {
 			player.sendMessage(ChatColor.RED + "Wrong password!");
+			System.out.println("[IceAuth] Player "+player.getName()+" tried changepassword with a wrong password!");
 			return true;
 		}
 
@@ -538,12 +541,13 @@ public class IceAuth extends JavaPlugin {
 
 			try {
 
-				Player player = this.getServer().getPlayer(playerName);
+				Player player = this.getServer().getPlayer(playerName); // this.. TODO: Get that getPlayer loop out of here
 				NLIData nli = notLoggedIn.get(playerName);
 				Location pos = nli.getLoc();
 
 				if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 30) {
 					player.kickPlayer("Took too long to log in");
+					System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
 					continue;
 				}
 
