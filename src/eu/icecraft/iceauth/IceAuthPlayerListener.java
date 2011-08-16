@@ -63,9 +63,9 @@ public class IceAuthPlayerListener extends PlayerListener {
 		boolean regged = plugin.isRegistered(player.getName());
 
 		plugin.addPlayerNotLoggedIn(player, player.getLocation(), regged);
-
+		
 		plugin.msgPlayerLogin(player);
-
+				
 		if(player.getHealth() <= 0) {
 			player.teleport(player.getWorld().getSpawnLocation());
 		}

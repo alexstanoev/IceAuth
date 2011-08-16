@@ -3,6 +3,7 @@ package eu.icecraft.iceauth;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityListener;
 import org.bukkit.event.entity.EntityTargetEvent;
 
@@ -30,6 +31,18 @@ public class IceAuthEntityListener extends EntityListener {
 		}
 	}
 
+	@Override
+	public void onEntityDeath(EntityDeathEvent event) {
+		Entity entity = event.getEntity();
+		if(!(entity instanceof Player)) {
+			return;
+		}
+
+		Player player = (Player) entity;
+		if(!plugin.checkAuth(player)) {
+			plugin.restoreInv(player); // is this needed?
+		}
+	}
 
 	@Override
 	public void onEntityTarget(EntityTargetEvent event) {

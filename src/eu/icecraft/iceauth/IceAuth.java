@@ -49,7 +49,7 @@ public class IceAuth extends JavaPlugin {
 	public ArrayList<String> playersLoggedIn = new ArrayList<String>();
 	public ArrayList<String> notRegistered = new ArrayList<String>();
 	public Map<String, NLIData> notLoggedIn = new HashMap<String, NLIData>();
-	
+
 	//private boolean useSpout;
 	//private Permissions perm;
 	//private boolean UseOP;
@@ -57,6 +57,7 @@ public class IceAuth extends JavaPlugin {
 	private String userField;
 	private String passField;
 	private MessageDigest md5;
+	private NLICacheHandler nch;
 
 	@Override
 	public void onDisable() {
@@ -89,7 +90,7 @@ public class IceAuth extends JavaPlugin {
 			UseOP  = true;
 		}
 		 */
-		
+
 		/*
 		Plugin spLoaded = pm.getPlugin("Spout");
 
@@ -99,8 +100,8 @@ public class IceAuth extends JavaPlugin {
 		} else {
 			System.out.println("[IceAuth] WARNING! Spout not found, inventories are unprotected!");
 		}
-		*/
-		
+		 */
+
 		if(!this.getDataFolder().exists()) this.getDataFolder().mkdir();
 		File confFile = new File(this.getDataFolder(), "config.yml");
 		Configuration conf = new Configuration(confFile);
@@ -187,7 +188,9 @@ public class IceAuth extends JavaPlugin {
 		} catch(NoSuchAlgorithmException ex) {
 			ex.printStackTrace();
 		}
-
+		
+		nch = new NLICacheHandler(this);
+		
 		IceAuthPlayerListener playerListener = new IceAuthPlayerListener(this);
 		IceAuthBlockListener blockListener = new IceAuthBlockListener(this);
 		IceAuthEntityListener entityListener = new IceAuthEntityListener(this);
@@ -196,8 +199,8 @@ public class IceAuth extends JavaPlugin {
 			IceAuthSpoutListener spoutListener = new IceAuthSpoutListener(this);
 			pm.registerEvent(Event.Type.CUSTOM_EVENT, spoutListener, Priority.Highest, this);
 		}
-		*/
-		
+		 */
+
 		pm.registerEvent(Event.Type.PLAYER_COMMAND_PREPROCESS, playerListener, Priority.Highest, this);
 		pm.registerEvent(Event.Type.PLAYER_CHAT, playerListener, Priority.Highest, this);
 		//pm.registerEvent(Event.Type.PLAYER_MOVE, playerListener, Priority.Monitor, this); pm.registerEvent(Event.Type.PLAYER_LOGIN, playerListener, Priority.High, this);
@@ -336,7 +339,7 @@ public class IceAuth extends JavaPlugin {
 
 	public void removePlayerCache(Player player) {
 		String pName = player.getName();
-		restoreInv(player);
+		if(!checkAuth(player)) restoreInv(player);
 		playersLoggedIn.remove(pName);
 		notLoggedIn.remove(pName);	
 		notRegistered.remove(pName);
@@ -345,7 +348,7 @@ public class IceAuth extends JavaPlugin {
 	public void addPlayerNotLoggedIn(Player player, Location loc, Boolean registered) {
 		NLIData nli = new NLIData(loc, (int) (System.currentTimeMillis() / 1000L), player.getInventory().getContents(), player.getInventory().getArmorContents());
 		notLoggedIn.put(player.getName(), nli);
-
+		nch.createCache(player.getName(), nli);
 		if(!registered) notRegistered.add(player.getName());
 	}
 
@@ -362,36 +365,38 @@ public class IceAuth extends JavaPlugin {
 		}
 	}
 
-	public void restoreInv(Player player) {
+	public void restoreInv(Player player) { // TODO: Serialize NLIData and save it
 		NLIData nli = notLoggedIn.get(player.getName());
-		
-        ItemStack[] invstackbackup = nli.getInventory();
-        player.getInventory().setContents(invstackbackup);
 
-        ItemStack[] armStackBackup = nli.getArmour();
+		ItemStack[] invstackbackup = nli.getInventory();
+		if(invstackbackup != null) {
+			player.getInventory().setContents(invstackbackup);
+		}
 
-        if(armStackBackup[3] != null) {
-            if(armStackBackup[3].getAmount() != 0) {
-                player.getInventory().setHelmet(armStackBackup[3]);
-            }
-        }
-        if(armStackBackup[2] != null) {
-            if(armStackBackup[2].getAmount() != 0) {
-                player.getInventory().setChestplate(armStackBackup[2]);
-            }
-        }
-        if(armStackBackup[1] != null) {
-            if(armStackBackup[1].getAmount() != 0) {
-                player.getInventory().setLeggings(armStackBackup[1]);
-            }
-        }
-        if(armStackBackup[0] != null) {
-            if(armStackBackup[0].getAmount() != 0) {
-                player.getInventory().setBoots(armStackBackup[0]);
-            }
-        }
+		ItemStack[] armStackBackup = nli.getArmour();
+
+		if(armStackBackup[3] != null) {
+			if(armStackBackup[3].getAmount() != 0) {
+				player.getInventory().setHelmet(armStackBackup[3]);
+			}
+		}
+		if(armStackBackup[2] != null) {
+			if(armStackBackup[2].getAmount() != 0) {
+				player.getInventory().setChestplate(armStackBackup[2]);
+			}
+		}
+		if(armStackBackup[1] != null) {
+			if(armStackBackup[1].getAmount() != 0) {
+				player.getInventory().setLeggings(armStackBackup[1]);
+			}
+		}
+		if(armStackBackup[0] != null) {
+			if(armStackBackup[0].getAmount() != 0) {
+				player.getInventory().setBoots(armStackBackup[0]);
+			}
+		}
 	}
-	
+
 	public String getMD5(String message) {
 		byte[] digest;
 		md5.reset();
@@ -515,9 +520,9 @@ public class IceAuth extends JavaPlugin {
 			regQ.setString(1, name);
 			regQ.setString(2, getMD5(password));
 			regQ.executeUpdate();
-			
+
 			System.out.println("[IceAuth] Player "+name+" registered sucessfully.");
-			
+
 			return true;
 
 		} catch (SQLException e) {
@@ -602,12 +607,17 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	// Data structures
-	
+
 	public class NLIData {
 		private int loggedSecs;
 		private Location loc;
 		private ItemStack[] inventory;
 		private ItemStack[] armour;	
+
+		public NLIData(ItemStack[] inventory, ItemStack[] armour) {
+			this.inventory = inventory;
+			this.armour = armour;
+		}
 		
 		public NLIData(Location loc, int loggedSecs, ItemStack[] inventory, ItemStack[] armour) {
 			this.inventory = inventory;
@@ -623,11 +633,11 @@ public class IceAuth extends JavaPlugin {
 		public int getLoggedSecs() {
 			return this.loggedSecs;
 		}
-		
+
 		public ItemStack[] getInventory() {
 			return inventory;
 		}
-		
+
 		public ItemStack[] getArmour() {
 			return armour;
 		}
