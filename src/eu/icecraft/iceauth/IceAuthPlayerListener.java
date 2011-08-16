@@ -66,6 +66,16 @@ public class IceAuthPlayerListener extends PlayerListener {
 
 		plugin.msgPlayerLogin(player);
 
+		if(player.getHealth() <= 0) {
+			player.teleport(player.getWorld().getSpawnLocation());
+		}
+
+		player.getInventory().clear();
+		player.getInventory().setHelmet(null);
+		player.getInventory().setChestplate(null);
+		player.getInventory().setLeggings(null);
+		player.getInventory().setBoots(null);
+
 	}
 
 	@Override
@@ -74,7 +84,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 			return;
 		}
 		Player player = event.getPlayer();
-
+		
 		plugin.removePlayerCache(player);
 
 	}
@@ -121,9 +131,9 @@ public class IceAuthPlayerListener extends PlayerListener {
 		//		"/0.1.6") || event.getMessage().equals("/0.1.7")) {
 		//	return;
 		//}
-		
+
 		plugin.msgPlayerLogin(player);
-		
+
 		event.setMessage("/notloggedin");
 		event.setCancelled(true);
 	}
