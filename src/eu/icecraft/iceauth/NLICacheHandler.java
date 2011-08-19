@@ -2,6 +2,7 @@ package eu.icecraft.iceauth;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Scanner;
 import java.util.ArrayList;
 
@@ -25,14 +26,19 @@ public class NLICacheHandler {
 		final File file = new File(plugin.getDataFolder() + "/cache/" + playername + ".cache");
 
 		if (file.exists()) {
-			return;
+			//return;
+		} else {
+			try {
+				file.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 
 		FileWriter writer = null;
 		try {
-			file.createNewFile();
-
-			writer = new FileWriter(file);
+			
+			writer = new FileWriter(file, false);
 
 			ItemStack[] invstack = invarm.getInventory();
 

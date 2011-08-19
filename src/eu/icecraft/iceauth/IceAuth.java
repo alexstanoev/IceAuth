@@ -338,7 +338,9 @@ public class IceAuth extends JavaPlugin {
 
 	public void removePlayerCache(Player player) {
 		String pName = player.getName();
-		if(!checkAuth(player)) restoreInv(player);
+
+		if(!checkAuth(player)) restoreInv(player); else saveInventory(player);
+
 		playersLoggedIn.remove(pName);
 		notLoggedIn.remove(pName);	
 		notRegistered.remove(pName);
@@ -347,8 +349,12 @@ public class IceAuth extends JavaPlugin {
 	public void addPlayerNotLoggedIn(Player player, Location loc, Boolean registered) {
 		NLIData nli = new NLIData(loc, (int) (System.currentTimeMillis() / 1000L), player.getInventory().getContents(), player.getInventory().getArmorContents());
 		notLoggedIn.put(player.getName(), nli);
-		nch.createCache(player.getName(), nli);
 		if(!registered) notRegistered.add(player.getName());
+	}
+
+	public void saveInventory(Player player) {
+		NLIData nli = new NLIData(player.getInventory().getContents(), player.getInventory().getArmorContents());
+		nch.createCache(player.getName(), nli);
 	}
 
 	public void delPlayerNotLoggedIn(Player player) {
@@ -364,8 +370,37 @@ public class IceAuth extends JavaPlugin {
 		}
 	}
 
+	public boolean checkInvEmpty(ItemStack[] invstack) {
+
+		for (int i = 0; i < invstack.length; i++) {
+			if (invstack[i] != null) {
+				if(invstack[i].getTypeId() > 0) return false;
+			}
+		}
+
+		return true;
+
+	}
+
+	public boolean isInvCacheEmpty(String pName) {
+		NLIData nli = nch.readCache(pName);
+		ItemStack[] inv = nli.getInventory();
+		if(checkInvEmpty(inv)) return true; 
+		return false;
+	}
+
 	public void restoreInv(Player player) {
-		NLIData nli = notLoggedIn.get(player.getName());
+		restoreInv(player, false);
+	}
+
+	public void restoreInv(Player player, boolean useCache) {
+		NLIData nli = null;
+
+		if(useCache) {
+			nli = nch.readCache(player.getName());
+		} else {
+			nli = notLoggedIn.get(player.getName());
+		}
 
 		ItemStack[] invstackbackup = nli.getInventory();
 		if(invstackbackup != null) {
@@ -579,7 +614,7 @@ public class IceAuth extends JavaPlugin {
 		//Set<String> ks = notLoggedIn.keySet();
 		//for (String playerName : ks) {
 		for (Player player : this.getServer().getOnlinePlayers()) {
-			
+
 			if(!checkAuth(player)) {
 				try {
 
@@ -588,7 +623,7 @@ public class IceAuth extends JavaPlugin {
 					NLIData nli = notLoggedIn.get(playerName);
 					Location pos = nli.getLoc();
 
-					if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 30) {
+					if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 40) {
 						player.kickPlayer("Took too long to log in");
 						System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
 						continue;
@@ -602,6 +637,7 @@ public class IceAuth extends JavaPlugin {
 
 				} catch(Exception ex) {
 					System.out.println("[IceAuth] Exception in thread caught - " + ex.getMessage()); // caught rare npe
+					ex.printStackTrace();
 				}
 			}
 		}

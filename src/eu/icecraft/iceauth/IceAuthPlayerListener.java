@@ -61,7 +61,11 @@ public class IceAuthPlayerListener extends PlayerListener {
 		Player player = event.getPlayer();
 
 		boolean regged = plugin.isRegistered(player.getName());
-
+		
+		if(plugin.checkInvEmpty(player.getInventory().getContents()) && !plugin.isInvCacheEmpty(player.getName())) {
+			plugin.restoreInv(player, true);
+		}
+		
 		plugin.addPlayerNotLoggedIn(player, player.getLocation(), regged);
 		
 		plugin.msgPlayerLogin(player);
@@ -77,7 +81,21 @@ public class IceAuthPlayerListener extends PlayerListener {
 		player.getInventory().setBoots(null);
 
 	}
-
+	
+	/*
+	@Override
+	public void onPlayerRespawn(PlayerRespawnEvent event) {
+		if(event.getPlayer() == null) {
+			return;
+		}
+		Player player = event.getPlayer();
+		
+		if(!plugin.checkAuth(player)) {
+			plugin.restoreInv(player);
+		}
+	}
+	*/
+	
 	@Override
 	public void onPlayerQuit(PlayerQuitEvent event) {
 		if(event.getPlayer() == null) {
