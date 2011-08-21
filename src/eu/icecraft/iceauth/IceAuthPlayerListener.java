@@ -62,6 +62,10 @@ public class IceAuthPlayerListener extends PlayerListener {
 
 		boolean regged = plugin.isRegistered(player.getName());
 		
+		if(player.getHealth() <= 0) {
+			player.teleport(player.getWorld().getSpawnLocation());
+		}
+		
 		if(plugin.checkInvEmpty(player.getInventory().getContents()) && !plugin.isInvCacheEmpty(player.getName())) {
 			plugin.restoreInv(player, true);
 		}
@@ -69,10 +73,6 @@ public class IceAuthPlayerListener extends PlayerListener {
 		plugin.addPlayerNotLoggedIn(player, player.getLocation(), regged);
 		
 		plugin.msgPlayerLogin(player);
-				
-		if(player.getHealth() <= 0) {
-			player.teleport(player.getWorld().getSpawnLocation());
-		}
 
 		player.getInventory().clear();
 		player.getInventory().setHelmet(null);

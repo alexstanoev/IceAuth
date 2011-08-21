@@ -623,7 +623,7 @@ public class IceAuth extends JavaPlugin {
 					NLIData nli = notLoggedIn.get(playerName);
 					Location pos = nli.getLoc();
 
-					if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 40) {
+					if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 60) {
 						player.kickPlayer("Took too long to log in");
 						System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
 						continue;
