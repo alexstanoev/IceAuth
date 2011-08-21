@@ -201,19 +201,19 @@ public class IceAuth extends JavaPlugin {
 		}
 		 */
 
-		pm.registerEvent(Event.Type.PLAYER_COMMAND_PREPROCESS, playerListener, Priority.Highest, this);
-		pm.registerEvent(Event.Type.PLAYER_CHAT, playerListener, Priority.Highest, this);
-		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Low, this);
-		pm.registerEvent(Event.Type.PLAYER_LOGIN, playerListener, Priority.High, this);
+		pm.registerEvent(Event.Type.PLAYER_COMMAND_PREPROCESS, playerListener, Priority.Lowest, this);
+		pm.registerEvent(Event.Type.PLAYER_CHAT, playerListener, Priority.Lowest, this);
+		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
+		pm.registerEvent(Event.Type.PLAYER_LOGIN, playerListener, Priority.Low, this);
 		pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.PLAYER_KICK, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Highest, this);
-		pm.registerEvent(Event.Type.PLAYER_DROP_ITEM, playerListener, Priority.Highest, this);
-		pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.BLOCK_PLACE, blockListener, Priority.Highest, this);
-		pm.registerEvent(Event.Type.BLOCK_BREAK, blockListener, Priority.Highest, this);
-		pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.Highest, this);
-		pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.Highest, this);
+		pm.registerEvent(Event.Type.PLAYER_KICK, playerListener, Priority.Normal, this);
+		pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Lowest, this);
+		pm.registerEvent(Event.Type.PLAYER_DROP_ITEM, playerListener, Priority.Lowest, this);
+		pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Priority.Lowest, this);
+		pm.registerEvent(Event.Type.BLOCK_PLACE, blockListener, Priority.Lowest, this);
+		pm.registerEvent(Event.Type.BLOCK_BREAK, blockListener, Priority.Lowest, this);
+		pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.Lowest, this);
+		pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.Lowest, this);
 
 		thread = new Thread(new PlayerThread(this));
 		thread.start();
