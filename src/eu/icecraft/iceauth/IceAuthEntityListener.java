@@ -39,6 +39,9 @@ public class IceAuthEntityListener extends EntityListener {
 		}
 
 		Player player = (Player) entity;
+		
+		player.teleport(player.getWorld().getSpawnLocation()); // should fix user reported bug
+		
 		if(!plugin.checkAuth(player)) {
 			plugin.restoreInv(player); // is this needed?
 		}
