@@ -557,6 +557,8 @@ public class IceAuth extends JavaPlugin {
 
 			System.out.println("[IceAuth] Player "+name+" registered sucessfully.");
 
+			notRegistered.remove(name);
+			
 			return true;
 
 		} catch (SQLException e) {
