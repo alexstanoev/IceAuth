@@ -61,17 +61,17 @@ public class IceAuthPlayerListener extends PlayerListener {
 		Player player = event.getPlayer();
 
 		boolean regged = plugin.isRegistered(player.getName());
-		
+
 		if(player.getHealth() <= 0) {
 			player.teleport(player.getWorld().getSpawnLocation());
+		} else {
+			if(plugin.checkInvEmpty(player.getInventory().getContents()) && !plugin.isInvCacheEmpty(player.getName())) {
+				plugin.restoreInv(player, true);
+			}
 		}
-		
-		if(plugin.checkInvEmpty(player.getInventory().getContents()) && !plugin.isInvCacheEmpty(player.getName())) {
-			plugin.restoreInv(player, true);
-		}
-		
+
 		plugin.addPlayerNotLoggedIn(player, player.getLocation(), regged);
-		
+
 		plugin.msgPlayerLogin(player);
 
 		player.getInventory().clear();
@@ -81,7 +81,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 		player.getInventory().setBoots(null);
 
 	}
-	
+
 	/*
 	@Override
 	public void onPlayerRespawn(PlayerRespawnEvent event) {
@@ -89,20 +89,20 @@ public class IceAuthPlayerListener extends PlayerListener {
 			return;
 		}
 		Player player = event.getPlayer();
-		
+
 		if(!plugin.checkAuth(player)) {
 			plugin.restoreInv(player);
 		}
 	}
-	*/
-	
+	 */
+
 	@Override
 	public void onPlayerQuit(PlayerQuitEvent event) {
 		if(event.getPlayer() == null) {
 			return;
 		}
 		Player player = event.getPlayer();
-		
+
 		plugin.removePlayerCache(player);
 
 	}
