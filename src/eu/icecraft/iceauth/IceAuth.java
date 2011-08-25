@@ -402,12 +402,20 @@ public class IceAuth extends JavaPlugin {
 			nli = notLoggedIn.get(player.getName());
 		}
 
-		ItemStack[] invstackbackup = nli.getInventory();
+		ItemStack[] invstackbackup = null;
+		ItemStack[] armStackBackup = null;
+		
+		try {
+			invstackbackup = nli.getInventory();
+			armStackBackup = nli.getArmour();
+		} catch(Exception e) {
+			System.out.println("[IceAuth] Restoring inventory failed");
+			e.printStackTrace();
+		}
+		
 		if(invstackbackup != null) {
 			player.getInventory().setContents(invstackbackup);
 		}
-
-		ItemStack[] armStackBackup = nli.getArmour();
 
 		if(armStackBackup[3] != null) {
 			if(armStackBackup[3].getAmount() != 0) {
@@ -638,7 +646,7 @@ public class IceAuth extends JavaPlugin {
 					}
 
 				} catch(Exception ex) {
-					System.out.println("[IceAuth] Exception in thread caught - " + ex.getMessage()); // caught rare npe
+					System.out.println("[IceAuth] Exception in thread caught, Player: "+player.getName()); // strange npe
 					ex.printStackTrace();
 				}
 			}
