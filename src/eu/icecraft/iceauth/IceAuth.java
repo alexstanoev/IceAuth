@@ -206,7 +206,7 @@ public class IceAuth extends JavaPlugin {
 		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
 		pm.registerEvent(Event.Type.PLAYER_LOGIN, playerListener, Priority.High, this);
 		pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.PLAYER_KICK, playerListener, Priority.High, this);
+		pm.registerEvent(Event.Type.PLAYER_KICK, playerListener, Priority.Monitor, this); // sorry! :(
 		pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Lowest, this);
 		pm.registerEvent(Event.Type.PLAYER_DROP_ITEM, playerListener, Priority.Lowest, this);
 		pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Priority.Lowest, this);
