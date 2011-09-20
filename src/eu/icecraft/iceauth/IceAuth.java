@@ -409,8 +409,9 @@ public class IceAuth extends JavaPlugin {
 			invstackbackup = nli.getInventory();
 			armStackBackup = nli.getArmour();
 		} catch(Exception e) {
-			System.out.println("[IceAuth] Restoring inventory failed");
+			System.out.println("[IceAuth] Restoring inventory failed for player " + player.getName());
 			e.printStackTrace();
+			return;
 		}
 		
 		if(invstackbackup != null) {
