@@ -1,5 +1,6 @@
 package eu.icecraft.iceauth;
 
+import org.bukkit.GameMode;
 import org.bukkit.entity.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
@@ -35,7 +36,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 				|| (playername.length() < 3)
 				|| (playername.equalsIgnoreCase("Notch")) // Enough Notch'es already!
 				|| (playername.equalsIgnoreCase("Player"))) {
-			event.disallow(Result.KICK_OTHER, "Name contained disallowed characters or was Player");
+			event.disallow(Result.KICK_OTHER, "Name contained disallowed characters or was Player/Notch");
 		}
 	}
 
@@ -74,6 +75,8 @@ public class IceAuthPlayerListener extends PlayerListener {
 
 		plugin.msgPlayerLogin(player);
 
+		player.setGameMode(GameMode.SURVIVAL);
+		
 		player.getInventory().clear();
 		player.getInventory().setHelmet(null);
 		player.getInventory().setChestplate(null);
@@ -81,20 +84,6 @@ public class IceAuthPlayerListener extends PlayerListener {
 		player.getInventory().setBoots(null);
 
 	}
-
-	/*
-	@Override
-	public void onPlayerRespawn(PlayerRespawnEvent event) {
-		if(event.getPlayer() == null) {
-			return;
-		}
-		Player player = event.getPlayer();
-
-		if(!plugin.checkAuth(player)) {
-			plugin.restoreInv(player);
-		}
-	}
-	 */
 
 	@Override
 	public void onPlayerQuit(PlayerQuitEvent event) {
@@ -144,11 +133,6 @@ public class IceAuthPlayerListener extends PlayerListener {
 		if(commandLabel.equalsIgnoreCase("/l")) {
 			return;
 		}
-		// Not sure this is needed
-		//if(event.getMessage().equals("/0.1.3") || event.getMessage().equals(
-		//		"/0.1.6") || event.getMessage().equals("/0.1.7")) {
-		//	return;
-		//}
 
 		plugin.msgPlayerLogin(player);
 
