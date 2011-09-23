@@ -12,10 +12,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-//import java.util.Set;
 import java.util.logging.Logger;
 
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -23,14 +23,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.inventory.ItemStack;
-//import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.Configuration;
 
 import com.alta189.sqlLibrary.MySQL.mysqlCore;
 import com.alta189.sqlLibrary.SQLite.sqlCore;
-//import com.nijikokun.bukkit.Permissions.Permissions;
 
 public class IceAuth extends JavaPlugin {
 
@@ -50,9 +48,6 @@ public class IceAuth extends JavaPlugin {
 	public ArrayList<String> notRegistered = new ArrayList<String>();
 	public Map<String, NLIData> notLoggedIn = new HashMap<String, NLIData>();
 
-	//private boolean useSpout;
-	//private Permissions perm;
-	//private boolean UseOP;
 	private Thread thread;
 	private String userField;
 	private String passField;
@@ -76,31 +71,6 @@ public class IceAuth extends JavaPlugin {
 	public void onEnable() {
 
 		PluginManager pm = getServer().getPluginManager();
-
-		// TODO: Permissions
-		/*
-		Plugin perms = pm.getPlugin("Permissions");
-
-		if (perms != null) {
-			if (!pm.isPluginEnabled(perms)) {
-				pm.enablePlugin(perms);
-			}
-			perm = (Permissions) perms;
-		} else {
-			UseOP  = true;
-		}
-		 */
-
-		/*
-		Plugin spLoaded = pm.getPlugin("Spout");
-
-		if (spLoaded != null && pm.isPluginEnabled(spLoaded)) {
-			System.out.println("[IceAuth] Found Spout, using inventory events.");
-			useSpout = true;
-		} else {
-			System.out.println("[IceAuth] WARNING! Spout not found, inventories are unprotected!");
-		}
-		 */
 
 		if(!this.getDataFolder().exists()) this.getDataFolder().mkdir();
 		File confFile = new File(this.getDataFolder(), "config.yml");
@@ -194,19 +164,13 @@ public class IceAuth extends JavaPlugin {
 		IceAuthPlayerListener playerListener = new IceAuthPlayerListener(this);
 		IceAuthBlockListener blockListener = new IceAuthBlockListener(this);
 		IceAuthEntityListener entityListener = new IceAuthEntityListener(this);
-		/*
-		if(useSpout) {
-			IceAuthSpoutListener spoutListener = new IceAuthSpoutListener(this);
-			pm.registerEvent(Event.Type.CUSTOM_EVENT, spoutListener, Priority.Highest, this);
-		}
-		 */
 
 		pm.registerEvent(Event.Type.PLAYER_COMMAND_PREPROCESS, playerListener, Priority.Lowest, this);
 		pm.registerEvent(Event.Type.PLAYER_CHAT, playerListener, Priority.Lowest, this);
 		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
 		pm.registerEvent(Event.Type.PLAYER_LOGIN, playerListener, Priority.High, this);
 		pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.PLAYER_KICK, playerListener, Priority.Monitor, this); // sorry! :(
+		pm.registerEvent(Event.Type.PLAYER_KICK, playerListener, Priority.Highest, this);
 		pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Lowest, this);
 		pm.registerEvent(Event.Type.PLAYER_DROP_ITEM, playerListener, Priority.Lowest, this);
 		pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Priority.Lowest, this);
@@ -217,6 +181,8 @@ public class IceAuth extends JavaPlugin {
 
 		thread = new Thread(new PlayerThread(this));
 		thread.start();
+
+		thread.setName("IceAuth thread");
 
 		System.out.println("IceAuth v1.0 has been enabled. Forked thread: "+thread.getName());
 
@@ -282,9 +248,15 @@ public class IceAuth extends JavaPlugin {
 
 			if(checkLogin(playername, password)) {
 				player.sendMessage(ChatColor.GREEN + "Logged in successfully");
+				
 				restoreInv(player);
+				
+				NLIData nli = notLoggedIn.get(playername);
+				player.setGameMode(nli.getGameMode());
+				
 				delPlayerNotLoggedIn(player);
 				addAuthPlayer(player);
+				
 				return true;
 			} else {
 				player.sendMessage(ChatColor.RED + "Wrong password!");
@@ -347,7 +319,7 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	public void addPlayerNotLoggedIn(Player player, Location loc, Boolean registered) {
-		NLIData nli = new NLIData(loc, (int) (System.currentTimeMillis() / 1000L), player.getInventory().getContents(), player.getInventory().getArmorContents());
+		NLIData nli = new NLIData(loc, (int) (System.currentTimeMillis() / 1000L), player.getInventory().getContents(), player.getInventory().getArmorContents(), player.getGameMode());
 		notLoggedIn.put(player.getName(), nli);
 		if(!registered) notRegistered.add(player.getName());
 	}
@@ -404,7 +376,7 @@ public class IceAuth extends JavaPlugin {
 
 		ItemStack[] invstackbackup = null;
 		ItemStack[] armStackBackup = null;
-		
+
 		try {
 			invstackbackup = nli.getInventory();
 			armStackBackup = nli.getArmour();
@@ -413,7 +385,7 @@ public class IceAuth extends JavaPlugin {
 			e.printStackTrace();
 			return;
 		}
-		
+
 		if(invstackbackup != null) {
 			player.getInventory().setContents(invstackbackup);
 		}
@@ -567,7 +539,7 @@ public class IceAuth extends JavaPlugin {
 			System.out.println("[IceAuth] Player "+name+" registered sucessfully.");
 
 			notRegistered.remove(name);
-			
+
 			return true;
 
 		} catch (SQLException e) {
@@ -622,20 +594,17 @@ public class IceAuth extends JavaPlugin {
 
 	public void tpPlayers(boolean msgLogin) {
 
-		//Set<String> ks = notLoggedIn.keySet();
-		//for (String playerName : ks) {
 		for (Player player : this.getServer().getOnlinePlayers()) {
 
 			if(!checkAuth(player)) {
 				try {
 
-					//Player player = this.getServer().getPlayer(playerName);
 					String playerName = player.getName();
 					NLIData nli = notLoggedIn.get(playerName);
 					Location pos = nli.getLoc();
 
 					if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 60) {
-						player.kickPlayer("Took too long to log in");
+						player.kickPlayer("You took too long to log in!");
 						System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
 						continue;
 					}
@@ -647,8 +616,7 @@ public class IceAuth extends JavaPlugin {
 					}
 
 				} catch(Exception ex) {
-					System.out.println("[IceAuth] Exception in thread caught, Player: "+player.getName()); // strange npe
-					ex.printStackTrace();
+					// Null Pointer Exception we don't really care about
 				}
 			}
 		}
@@ -661,18 +629,20 @@ public class IceAuth extends JavaPlugin {
 		private int loggedSecs;
 		private Location loc;
 		private ItemStack[] inventory;
-		private ItemStack[] armour;	
+		private ItemStack[] armour;
+		private GameMode gameMode;	
 
 		public NLIData(ItemStack[] inventory, ItemStack[] armour) {
 			this.inventory = inventory;
 			this.armour = armour;
 		}
 
-		public NLIData(Location loc, int loggedSecs, ItemStack[] inventory, ItemStack[] armour) {
+		public NLIData(Location loc, int loggedSecs, ItemStack[] inventory, ItemStack[] armour, GameMode gameMode) {
 			this.inventory = inventory;
 			this.armour = armour;
 			this.loc = loc;
 			this.loggedSecs = loggedSecs;
+			this.gameMode = gameMode;
 		}
 
 		public Location getLoc() {
@@ -689,6 +659,10 @@ public class IceAuth extends JavaPlugin {
 
 		public ItemStack[] getArmour() {
 			return armour;
+		}
+		
+		public GameMode getGameMode() {
+			return gameMode;
 		}
 	}
 
