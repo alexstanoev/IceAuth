@@ -168,9 +168,9 @@ public class IceAuth extends JavaPlugin {
 		pm.registerEvent(Event.Type.PLAYER_COMMAND_PREPROCESS, playerListener, Priority.Lowest, this);
 		pm.registerEvent(Event.Type.PLAYER_CHAT, playerListener, Priority.Lowest, this);
 		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.PLAYER_LOGIN, playerListener, Priority.High, this);
+		pm.registerEvent(Event.Type.PLAYER_LOGIN, playerListener, Priority.Monitor, this);
 		pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.PLAYER_KICK, playerListener, Priority.Highest, this);
+		pm.registerEvent(Event.Type.PLAYER_KICK, playerListener, Priority.Monitor, this);
 		pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Lowest, this);
 		pm.registerEvent(Event.Type.PLAYER_DROP_ITEM, playerListener, Priority.Lowest, this);
 		pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Priority.Lowest, this);
@@ -418,8 +418,7 @@ public class IceAuth extends JavaPlugin {
 		md5.update(message.getBytes());
 		digest = md5.digest();
 
-		return String.format("%0" + (digest.length << 1) + "x", new BigInteger(1,
-				digest));
+		return String.format("%0" + (digest.length << 1) + "x", new BigInteger(1, digest));
 	}
 
 	public boolean isRegistered(String name) {
@@ -596,7 +595,7 @@ public class IceAuth extends JavaPlugin {
 
 		for (Player player : this.getServer().getOnlinePlayers()) {
 
-			if(!checkAuth(player)) {
+			if(player != null && !checkAuth(player)) {
 				try {
 
 					String playerName = player.getName();
