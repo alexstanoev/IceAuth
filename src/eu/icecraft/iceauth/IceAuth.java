@@ -539,7 +539,7 @@ public class IceAuth extends JavaPlugin {
 			regQ.setString(2, getMD5(password));
 			regQ.executeUpdate();
 
-			System.out.println("[IceAuth] Player "+name+" registered sucessfully.");
+			System.out.println("[IceAuth] Player "+name+" registered successfully.");
 
 			notRegistered.remove(name);
 
