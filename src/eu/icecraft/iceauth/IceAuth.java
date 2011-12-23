@@ -30,6 +30,7 @@ import org.bukkit.util.config.Configuration;
 import com.alta189.sqlLibrary.MySQL.mysqlCore;
 import com.alta189.sqlLibrary.SQLite.sqlCore;
 
+@SuppressWarnings("deprecation")
 public class IceAuth extends JavaPlugin {
 
 	public String logPrefix = "[IceAuth] ";
@@ -48,7 +49,8 @@ public class IceAuth extends JavaPlugin {
 	public ArrayList<String> notRegistered = new ArrayList<String>();
 	public Map<String, NLIData> notLoggedIn = new HashMap<String, NLIData>();
 
-	private Thread thread;
+	//private Thread thread;
+	private int threadRuns;
 	private String userField;
 	private String passField;
 	private MessageDigest md5;
@@ -57,12 +59,12 @@ public class IceAuth extends JavaPlugin {
 	@Override
 	public void onDisable() {
 
-		try {
-			thread.interrupt();
-			thread.join();
-		} catch (InterruptedException ex) {
-			ex.printStackTrace();
-		}
+		//try {
+		//	thread.interrupt();
+		//	thread.join();
+		//} catch (InterruptedException ex) {
+		//	ex.printStackTrace();
+		//}
 
 		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " was disabled!");
 	}
@@ -179,12 +181,14 @@ public class IceAuth extends JavaPlugin {
 		pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.Lowest, this);
 		pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.Lowest, this);
 
-		thread = new Thread(new PlayerThread(this));
-		thread.start();
+		//thread = new Thread(new PlayerThread(this));
+		//thread.start();
 
-		thread.setName("IceAuth thread");
+		//thread.setName("IceAuth thread");
 
-		System.out.println("IceAuth v1.0 has been enabled. Forked thread: "+thread.getName());
+		this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new PlayerSyncThread(), 20, 20);
+		
+		System.out.println("IceAuth v1.0 has been enabled.");
 
 	}
 
@@ -663,6 +667,20 @@ public class IceAuth extends JavaPlugin {
 		public GameMode getGameMode() {
 			return gameMode;
 		}
+	}
+	
+	public class PlayerSyncThread implements Runnable {
+		@Override
+		public void run() {
+			threadRuns++;
+			if(threadRuns == 11) {
+				threadRuns = 0;
+				tpPlayers(true);
+			} else {
+				tpPlayers(false);
+			}
+		}
+		
 	}
 
 }
