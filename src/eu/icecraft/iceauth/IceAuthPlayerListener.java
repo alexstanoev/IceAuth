@@ -40,14 +40,17 @@ public class IceAuthPlayerListener extends PlayerListener {
 					if(playername.equalsIgnoreCase("Notch") {
 						event.disallow(Result.KICK_OTHER, "Notch is not allowed here.");
 					}
+					
 					if(playername.equalsIgnoreCase("Player") {
 						event.disallow(Result.KICK_OTHER, "Name 'Player' is not allowed, hint: don't use Offline mode");
 					}
+					
 					if(playername.length() > 16 || playername.length() < 3) {
 						event.disallow(Result.KICK_OTHER, "Invalid name");
 					}
+					
 					if(!playername.matches("[a-zA-Z0-9_?]*")) {	
-			                        event.disallow(Result.KICK_OTHER, "Name contains illegal characters");	
+			                	event.disallow(Result.KICK_OTHER, "Name contains illegal characters");	
 					}
 		}
 	}
