@@ -2,20 +2,21 @@ package eu.icecraft.iceauth;
 
 import org.bukkit.GameMode;
 import org.bukkit.entity.*;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
 
-public class IceAuthPlayerListener extends PlayerListener {
-
+public class IceAuthPlayerListener implements Listener {
 	private IceAuth plugin;
 
 	public IceAuthPlayerListener(IceAuth instance) {
 		plugin = instance;
 	}
 
-	@Override
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerLogin(PlayerLoginEvent event) {
-
 		if(event.getResult() != Result.ALLOWED || event.getPlayer() == null) {
 			return;
 		}
@@ -24,11 +25,9 @@ public class IceAuthPlayerListener extends PlayerListener {
 		String playername = player.getName();
 
 		for(Player p : plugin.getServer().getOnlinePlayers()) {
-
 			if(p.getName().toLowerCase().equals(event.getPlayer().getName().toLowerCase()) && plugin.checkAuth(p)) {
 				event.disallow(Result.KICK_OTHER, "There's an user logged in with that name!");
 			}
-
 		}
 
 		if((!playername.matches("[a-zA-Z0-9_?]*"))
@@ -40,7 +39,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 		}
 	}
 
-	@Override
+	@EventHandler(priority = EventPriority.MONITOR)
 	public void onPlayerKick(PlayerKickEvent event) {
 		if(event.isCancelled() || event.getPlayer() == null) {
 			return;
@@ -54,7 +53,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 		}
 	}
 
-	@Override
+	@EventHandler(priority = EventPriority.MONITOR)
 	public void onPlayerJoin(PlayerJoinEvent event) {
 		if(event.getPlayer() == null) {
 			return;
@@ -71,12 +70,14 @@ public class IceAuthPlayerListener extends PlayerListener {
 			}
 		}
 
+		if(plugin.giveKits && !regged) plugin.giveKits(player);
+
 		plugin.addPlayerNotLoggedIn(player, player.getLocation(), regged);
 
 		plugin.msgPlayerLogin(player);
 
 		player.setGameMode(GameMode.SURVIVAL);
-		
+
 		player.getInventory().clear();
 		player.getInventory().setHelmet(null);
 		player.getInventory().setChestplate(null);
@@ -85,7 +86,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 
 	}
 
-	@Override
+	@EventHandler(priority = EventPriority.MONITOR)
 	public void onPlayerQuit(PlayerQuitEvent event) {
 		if(event.getPlayer() == null) {
 			return;
@@ -96,7 +97,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 
 	}
 
-	@Override
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerChat(PlayerChatEvent event) {
 		if(event.isCancelled() || event.getPlayer() == null) {
 			return;
@@ -110,7 +111,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 		}
 	}
 
-	@Override
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) {
 		if(event.isCancelled() || event.getPlayer() == null) {
 			return;
@@ -121,15 +122,12 @@ public class IceAuthPlayerListener extends PlayerListener {
 		if(plugin.checkAuth(player)) {
 			return;
 		}
-
 		if(commandLabel.equalsIgnoreCase("/register")) {
 			return;
 		}
-
 		if(commandLabel.equalsIgnoreCase("/login")) {
 			return;
 		}
-
 		if(commandLabel.equalsIgnoreCase("/l")) {
 			return;
 		}
@@ -140,7 +138,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 		event.setCancelled(true);
 	}
 
-	@Override
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerPickupItem(PlayerPickupItemEvent event) {
 		if(event.isCancelled() || event.getPlayer() == null) {
 			return;
@@ -151,7 +149,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 		}
 	}
 
-	@Override
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerDropItem(PlayerDropItemEvent event) {
 		if(event.isCancelled() || event.getPlayer() == null) {
 			return;
@@ -162,7 +160,7 @@ public class IceAuthPlayerListener extends PlayerListener {
 		}
 	}
 
-	@Override
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerInteract(PlayerInteractEvent event) {
 		if(event.isCancelled() || event.getPlayer() == null) {
 			return;

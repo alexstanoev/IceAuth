@@ -2,20 +2,20 @@ package eu.icecraft.iceauth;
 
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.entity.EntityListener;
 import org.bukkit.event.entity.EntityTargetEvent;
 
-public class IceAuthEntityListener extends EntityListener {
-
+public class IceAuthEntityListener implements Listener {
 	private final IceAuth plugin;
 
 	public IceAuthEntityListener(final IceAuth plugin) {
 		this.plugin = plugin;
 	}
 
-	@Override
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onEntityDamage(EntityDamageEvent event) {
 		if(event.isCancelled()) {
 			return;
@@ -31,23 +31,7 @@ public class IceAuthEntityListener extends EntityListener {
 		}
 	}
 
-	@Override
-	public void onEntityDeath(EntityDeathEvent event) {
-		Entity entity = event.getEntity();
-		if(!(entity instanceof Player)) {
-			return;
-		}
-
-		Player player = (Player) entity;
-		
-		player.teleport(player.getWorld().getSpawnLocation()); // should fix user reported bug
-		
-		if(!plugin.checkAuth(player)) {
-			plugin.restoreInv(player); // is this needed?
-		}
-	}
-
-	@Override
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onEntityTarget(EntityTargetEvent event) {
 		if(event.isCancelled()) {
 			return;

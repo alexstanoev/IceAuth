@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -20,10 +21,8 @@ import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
-import org.bukkit.event.Event.Priority;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.PluginManager;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.Configuration;
 
@@ -32,11 +31,13 @@ import com.alta189.sqlLibrary.SQLite.sqlCore;
 
 @SuppressWarnings("deprecation")
 public class IceAuth extends JavaPlugin {
-
 	public String logPrefix = "[IceAuth] ";
 	public Logger log = Logger.getLogger("Minecraft");
 	public mysqlCore manageMySQL;
 	public sqlCore manageSQLite;
+
+	public boolean giveKits;
+	public List<String> kit;
 
 	public Boolean MySQL = false;
 	public String dbHost = null;
@@ -49,36 +50,24 @@ public class IceAuth extends JavaPlugin {
 	public ArrayList<String> notRegistered = new ArrayList<String>();
 	public Map<String, NLIData> notLoggedIn = new HashMap<String, NLIData>();
 
-	//private Thread thread;
 	private int threadRuns;
 	private String userField;
 	private String passField;
 	private MessageDigest md5;
 	private NLICacheHandler nch;
 
+
 	@Override
 	public void onDisable() {
-
-		//try {
-		//	thread.interrupt();
-		//	thread.join();
-		//} catch (InterruptedException ex) {
-		//	ex.printStackTrace();
-		//}
-
 		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " was disabled!");
 	}
 
 	@Override
 	public void onEnable() {
-
-		PluginManager pm = getServer().getPluginManager();
-
 		if(!this.getDataFolder().exists()) this.getDataFolder().mkdir();
 		File confFile = new File(this.getDataFolder(), "config.yml");
 		Configuration conf = new Configuration(confFile);
 		if(!confFile.exists()) {
-
 			conf.setProperty("mysql.use", false);
 			conf.setProperty("mysql.dbHost", "localhost");
 			conf.setProperty("mysql.dbUser", "root");
@@ -88,9 +77,24 @@ public class IceAuth extends JavaPlugin {
 			conf.setProperty("mysql.userField", "username");
 			conf.setProperty("mysql.passField", "password");
 			conf.save();
-
 		}
+
+		if(conf.getProperty("giveKits") == null) {
+			List<String> defaultKit = new ArrayList<String>();
+			defaultKit.add("358:1:1"); // 1 welcome map
+			defaultKit.add("358:2:1"); // 1 rules map
+			defaultKit.add("270:0:1"); // 1 wooden pickaxe
+			defaultKit.add("17:0:4"); // 4 logs
+			conf.setProperty("giveKits", true);
+
+			conf.setProperty("kit", defaultKit);
+			conf.save();
+		}
+
 		conf.load();
+
+		this.giveKits = conf.getBoolean("giveKits", true);
+		this.kit = conf.getStringList("kit", null);
 
 		this.MySQL = conf.getBoolean("mysql.use", false);
 		this.dbHost = conf.getString("mysql.dbHost");
@@ -148,11 +152,8 @@ public class IceAuth extends JavaPlugin {
 			this.manageSQLite.initialize();
 
 			if (!this.manageSQLite.checkTable(tableName)) {
-
 				this.manageSQLite.createTable("CREATE TABLE auth (id INT AUTO_INCREMENT PRIMARY_KEY, username VARCHAR(30), password VARCHAR(50));");
-
 			}
-
 		}
 
 		try {
@@ -167,29 +168,13 @@ public class IceAuth extends JavaPlugin {
 		IceAuthBlockListener blockListener = new IceAuthBlockListener(this);
 		IceAuthEntityListener entityListener = new IceAuthEntityListener(this);
 
-		pm.registerEvent(Event.Type.PLAYER_COMMAND_PREPROCESS, playerListener, Priority.Lowest, this);
-		pm.registerEvent(Event.Type.PLAYER_CHAT, playerListener, Priority.Lowest, this);
-		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.PLAYER_LOGIN, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.PLAYER_KICK, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Lowest, this);
-		pm.registerEvent(Event.Type.PLAYER_DROP_ITEM, playerListener, Priority.Lowest, this);
-		pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Priority.Lowest, this);
-		pm.registerEvent(Event.Type.BLOCK_PLACE, blockListener, Priority.Lowest, this);
-		pm.registerEvent(Event.Type.BLOCK_BREAK, blockListener, Priority.Lowest, this);
-		pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.Lowest, this);
-		pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.Lowest, this);
-
-		//thread = new Thread(new PlayerThread(this));
-		//thread.start();
-
-		//thread.setName("IceAuth thread");
+		this.getServer().getPluginManager().registerEvents(playerListener, this);
+		this.getServer().getPluginManager().registerEvents(blockListener, this);
+		this.getServer().getPluginManager().registerEvents(entityListener, this);
 
 		this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new PlayerSyncThread(), 20, 20);
-		
-		System.out.println("IceAuth v1.0 has been enabled.");
 
+		System.out.println("IceAuth v1.1 has been enabled.");
 	}
 
 	@Override
@@ -252,15 +237,15 @@ public class IceAuth extends JavaPlugin {
 
 			if(checkLogin(playername, password)) {
 				player.sendMessage(ChatColor.GREEN + "Logged in successfully");
-				
+
 				restoreInv(player);
-				
+
 				NLIData nli = notLoggedIn.get(playername);
 				player.setGameMode(nli.getGameMode());
-				
+
 				delPlayerNotLoggedIn(player);
 				addAuthPlayer(player);
-				
+
 				return true;
 			} else {
 				player.sendMessage(ChatColor.RED + "Wrong password!");
@@ -595,6 +580,25 @@ public class IceAuth extends JavaPlugin {
 		return false;
 	}
 
+	public void giveKits(Player player) {
+		if(this.kit != null) {
+			PlayerInventory inv = player.getInventory();
+			for(String item : this.kit) {
+				String[] parts = item.split(":");
+				if(parts.length != 3) continue;
+
+				int type = Integer.parseInt(parts[0]);
+				short damage = Short.parseShort(parts[1]);
+				int amount = Integer.parseInt(parts[2]);
+
+				ItemStack is = new ItemStack(type, amount);
+				if(damage != 0) is.setDurability(damage);
+
+				inv.addItem(is);
+			}
+		}
+	}
+
 	public void tpPlayers(boolean msgLogin) {
 
 		for (Player player : this.getServer().getOnlinePlayers()) {
@@ -663,12 +667,12 @@ public class IceAuth extends JavaPlugin {
 		public ItemStack[] getArmour() {
 			return armour;
 		}
-		
+
 		public GameMode getGameMode() {
 			return gameMode;
 		}
 	}
-	
+
 	public class PlayerSyncThread implements Runnable {
 		@Override
 		public void run() {
@@ -680,7 +684,7 @@ public class IceAuth extends JavaPlugin {
 				tpPlayers(false);
 			}
 		}
-		
+
 	}
 
 }
