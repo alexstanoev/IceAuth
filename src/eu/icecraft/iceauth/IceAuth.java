@@ -76,25 +76,23 @@ public class IceAuth extends JavaPlugin {
 			conf.setProperty("mysql.tableName", "auth");
 			conf.setProperty("mysql.userField", "username");
 			conf.setProperty("mysql.passField", "password");
-			conf.save();
-		}
 
-		if(conf.getProperty("giveKits") == null) {
 			List<String> defaultKit = new ArrayList<String>();
 			defaultKit.add("358:1:1"); // 1 welcome map
 			defaultKit.add("358:2:1"); // 1 rules map
 			defaultKit.add("270:0:1"); // 1 wooden pickaxe
 			defaultKit.add("17:0:4"); // 4 logs
-			conf.setProperty("giveKits", true);
 
-			conf.setProperty("kit", defaultKit);
+			conf.setProperty("kits.enable", true);
+			conf.setProperty("kits.items", defaultKit);
+			
 			conf.save();
 		}
 
 		conf.load();
 
-		this.giveKits = conf.getBoolean("giveKits", true);
-		this.kit = conf.getStringList("kit", null);
+		this.giveKits = conf.getBoolean("kits.enable", true);
+		this.kit = conf.getStringList("kits.items", null);
 
 		this.MySQL = conf.getBoolean("mysql.use", false);
 		this.dbHost = conf.getString("mysql.dbHost");
@@ -174,7 +172,7 @@ public class IceAuth extends JavaPlugin {
 
 		this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new PlayerSyncThread(), 20, 20);
 
-		System.out.println("IceAuth v1.1 has been enabled.");
+		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " has been enabled.");
 	}
 
 	@Override
