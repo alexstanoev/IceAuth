@@ -56,7 +56,7 @@ public class IceAuth extends JavaPlugin {
 
 	public int threadRuns;
 	public int sqlQueries = 0;
-	public long timingNanos;
+	public long timingMicros;
 	public long sqlQueryTime;
 	public long syncTaskTime;
 
@@ -180,7 +180,7 @@ public class IceAuth extends JavaPlugin {
 
 		this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new PlayerSyncThread(), 20, 20);
 
-		int timeToStart = Math.round(stopTiming() / 1000000);
+		int timeToStart = Math.round(stopTiming() / 1000);
 		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " has been enabled in " + timeToStart + "ms.");
 	}
 
@@ -281,13 +281,28 @@ public class IceAuth extends JavaPlugin {
 		}
 
 		if(commandLabel.equalsIgnoreCase("iceauth") && sender.isOp()) {
+			int sqlMillis = Math.round(this.sqlQueryTime / 1000);
+			String sqlMsg = null;
+			if(sqlMillis == 0) {
+				sqlMsg = this.sqlQueryTime + "us.";
+			} else {
+				sqlMsg = sqlMillis + "ms.";
+			}
+
+			int taskMillis = Math.round(this.syncTaskTime / 1000);
+			String taskMsg = null;
+			if(taskMillis == 0) {
+				taskMsg =  this.syncTaskTime + "us.";
+			} else {
+				taskMsg = taskMillis + "ms.";
+			}
+
 			sender.sendMessage(ChatColor.YELLOW + "=== IceAuth performance stats ===");
-			sender.sendMessage(ChatColor.YELLOW + "Time taken for SQL queries: " + Math.round(this.sqlQueryTime / 1000000) + "ms. over " + this.sqlQueries + " queries.");
-			sender.sendMessage(ChatColor.YELLOW + "Time taken for sync task: " + Math.round(this.syncTaskTime / 1000000) + "ms. over " + this.threadRuns + " runs.");
+			sender.sendMessage(ChatColor.YELLOW + "Time taken for SQL queries: " + sqlMsg + " over " + this.sqlQueries + " queries.");
+			sender.sendMessage(ChatColor.YELLOW + "Time taken for sync task: " + taskMsg + " over " + this.threadRuns + " runs.");
 			sender.sendMessage(ChatColor.YELLOW + "playersLoggedIn size: " + this.playersLoggedIn.size());
 			sender.sendMessage(ChatColor.YELLOW + "notRegistered size: " + this.notRegistered.size());
 			sender.sendMessage(ChatColor.YELLOW + "notLoggedIn size: " + this.notLoggedIn.size());
-			sender.sendMessage(ChatColor.YELLOW + "shouldBeCancelled size: " + IceAuthPlayerListener.shouldBeCancelled.size());
 			return true;
 		}
 
@@ -617,11 +632,11 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	public void startTiming() {
-		this.timingNanos = System.nanoTime();
+		this.timingMicros = System.nanoTime()/1000;
 	}
 
 	public long stopTiming() {
-		return System.nanoTime() - this.timingNanos;
+		return (System.nanoTime()/1000) - this.timingMicros;
 	}
 
 	public void tpPlayers(boolean msgLogin) {

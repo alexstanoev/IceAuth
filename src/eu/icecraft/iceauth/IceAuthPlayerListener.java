@@ -1,8 +1,5 @@
 package eu.icecraft.iceauth;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.bukkit.GameMode;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -13,7 +10,6 @@ import org.bukkit.event.player.PlayerLoginEvent.Result;
 
 public class IceAuthPlayerListener implements Listener {
 	private IceAuth plugin;
-	public static Map<String, String> shouldBeCancelled = new HashMap<String, String>();
 
 	public IceAuthPlayerListener(IceAuth instance) {
 		plugin = instance;
@@ -21,7 +17,7 @@ public class IceAuthPlayerListener implements Listener {
 
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerLoginEarly(PlayerLoginEvent event) {
-		if(event.getResult() != Result.ALLOWED || event.getPlayer() == null) {
+		if((event.getResult() != Result.ALLOWED && event.getResult() != Result.KICK_FULL) || event.getPlayer() == null) {
 			return;
 		}
 
@@ -29,9 +25,14 @@ public class IceAuthPlayerListener implements Listener {
 		String playername = player.getName();
 
 		for(Player p : plugin.getServer().getOnlinePlayers()) {
-			if(p.getName().toLowerCase().equals(event.getPlayer().getName().toLowerCase()) && plugin.checkAuth(p)) {
-				event.disallow(Result.KICK_OTHER, "There's an user logged in with that name!");
-				shouldBeCancelled.put(playername, "There's an user logged in with that name!");
+			if(p.getName().equalsIgnoreCase(playername)) {
+				if(!plugin.checkAuth(p)) {
+					p.kickPlayer("You logged in from another location");
+					System.out.println("[IceAuth] Duplicate player name for " + event.getPlayer().getName().toLowerCase() + ", kicked not logged in player");
+				} else {
+					event.disallow(Result.KICK_OTHER, "There's an user logged in with that name!");
+					System.out.println("[IceAuth] Cancelled early login event, duplicate name for " + event.getPlayer().getName().toLowerCase());	
+				}
 			}
 		}
 
@@ -41,20 +42,8 @@ public class IceAuthPlayerListener implements Listener {
 				|| (playername.equalsIgnoreCase("Notch")) // Enough Notch'es already!
 				|| (playername.equalsIgnoreCase("Player"))) {
 			event.disallow(Result.KICK_OTHER, "Name contained disallowed characters or was Player/Notch");
-			shouldBeCancelled.put(playername, "Name contained disallowed characters or was Player/Notch");
+			System.out.println("[IceAuth] Cancelled early login event, bad name for " + playername);
 		}
-	}
-
-	@EventHandler(priority = EventPriority.MONITOR)
-	public void onPlayerLoginLate(PlayerLoginEvent event) { // That event should really be cancelled to prevent serious exploits
-		if(event.getPlayer() == null) return;
-
-		if(event.getResult() == Result.ALLOWED && shouldBeCancelled.containsKey(event.getPlayer().getName())) {
-			System.out.println("[IceAuth] Some plugin allowed a cancelled login event! Disabling at MONITOR level.");
-			event.disallow(Result.KICK_OTHER, shouldBeCancelled.get(event.getPlayer().getName()));
-		}
-
-		shouldBeCancelled.remove(event.getPlayer().getName());
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST)
