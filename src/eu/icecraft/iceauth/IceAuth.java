@@ -39,23 +39,29 @@ public class IceAuth extends JavaPlugin {
 	public boolean giveKits;
 	public List<String> kit;
 
+	public Location firstSpawn;
+
 	public Boolean MySQL = false;
-	public String dbHost = null;
-	public String dbUser = null;
-	public String dbPass = null;
-	public String dbDatabase = null;
+	public String dbHost;
+	public String dbUser;
+	public String dbPass;
+	public String dbDatabase;
 	public String tableName;
+	public String userField;
+	public String passField;
 
 	public ArrayList<String> playersLoggedIn = new ArrayList<String>();
 	public ArrayList<String> notRegistered = new ArrayList<String>();
 	public Map<String, NLIData> notLoggedIn = new HashMap<String, NLIData>();
 
-	private int threadRuns;
-	private String userField;
-	private String passField;
-	private MessageDigest md5;
-	private NLICacheHandler nch;
+	public int threadRuns;
+	public int sqlQueries = 0;
+	public long timingNanos;
+	public long sqlQueryTime;
+	public long syncTaskTime;
 
+	public MessageDigest md5;
+	public NLICacheHandler nch;
 
 	@Override
 	public void onDisable() {
@@ -64,6 +70,8 @@ public class IceAuth extends JavaPlugin {
 
 	@Override
 	public void onEnable() {
+		startTiming();
+
 		if(!this.getDataFolder().exists()) this.getDataFolder().mkdir();
 		File confFile = new File(this.getDataFolder(), "config.yml");
 		Configuration conf = new Configuration(confFile);
@@ -85,7 +93,7 @@ public class IceAuth extends JavaPlugin {
 
 			conf.setProperty("kits.enable", true);
 			conf.setProperty("kits.items", defaultKit);
-			
+
 			conf.save();
 		}
 
@@ -172,12 +180,12 @@ public class IceAuth extends JavaPlugin {
 
 		this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new PlayerSyncThread(), 20, 20);
 
-		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " has been enabled.");
+		int timeToStart = Math.round(stopTiming() / 1000000);
+		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " has been enabled in " + timeToStart + "ms.");
 	}
 
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
-
 		if(commandLabel.equalsIgnoreCase("register")) {
 			if(!(sender instanceof Player)) {
 				return false;
@@ -188,13 +196,10 @@ public class IceAuth extends JavaPlugin {
 				player.sendMessage(ChatColor.RED + "Already registered.");
 				return false;
 			}
-
-
 			if(args.length != 1) {
 				player.sendMessage("Usage: /register <password>");
 				return false;
 			}
-
 
 			String password = args[0];
 
@@ -202,7 +207,6 @@ public class IceAuth extends JavaPlugin {
 				player.sendMessage(ChatColor.RED + "Something failed?");
 				return false;
 			}
-
 
 			player.sendMessage(ChatColor.GREEN + "Registered successfully! Use /login <password>");
 
@@ -250,9 +254,7 @@ public class IceAuth extends JavaPlugin {
 				System.out.println("[IceAuth] Player "+player.getName()+" tried logging in with a wrong password!");
 				return false;
 			}
-
 		}
-
 
 		if(commandLabel.equalsIgnoreCase("changepassword")) {
 			if(!(sender instanceof Player)) {
@@ -276,11 +278,20 @@ public class IceAuth extends JavaPlugin {
 
 			changePassword(args[0], args[1], player);
 			return true;
+		}
 
+		if(commandLabel.equalsIgnoreCase("iceauth") && sender.isOp()) {
+			sender.sendMessage(ChatColor.YELLOW + "=== IceAuth performance stats ===");
+			sender.sendMessage(ChatColor.YELLOW + "Time taken for SQL queries: " + Math.round(this.sqlQueryTime / 1000000) + "ms. over " + this.sqlQueries + " queries.");
+			sender.sendMessage(ChatColor.YELLOW + "Time taken for sync task: " + Math.round(this.syncTaskTime / 1000000) + "ms. over " + this.threadRuns + " runs.");
+			sender.sendMessage(ChatColor.YELLOW + "playersLoggedIn size: " + this.playersLoggedIn.size());
+			sender.sendMessage(ChatColor.YELLOW + "notRegistered size: " + this.notRegistered.size());
+			sender.sendMessage(ChatColor.YELLOW + "notLoggedIn size: " + this.notLoggedIn.size());
+			sender.sendMessage(ChatColor.YELLOW + "shouldBeCancelled size: " + IceAuthPlayerListener.shouldBeCancelled.size());
+			return true;
 		}
 
 		return false;
-
 	}
 
 	public void addAuthPlayer(Player player) {
@@ -330,15 +341,12 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	public boolean checkInvEmpty(ItemStack[] invstack) {
-
 		for (int i = 0; i < invstack.length; i++) {
 			if (invstack[i] != null) {
 				if(invstack[i].getTypeId() > 0) return false;
 			}
 		}
-
 		return true;
-
 	}
 
 	public boolean isInvCacheEmpty(String pName) {
@@ -429,10 +437,13 @@ public class IceAuth extends JavaPlugin {
 		}
 
 		try {
-
+			startTiming();
 			PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) AS c FROM "+tableName+" WHERE " + userField + " = ?");
 			regQ.setString(1, name);
 			result = regQ.executeQuery();
+			this.sqlQueryTime += stopTiming();
+			this.sqlQueries++;
+
 			while(result.next()) {
 				if(result.getInt("c") > 0) {
 					return true;
@@ -473,10 +484,14 @@ public class IceAuth extends JavaPlugin {
 			connection = this.manageSQLite.getConnection();
 		}
 		try {
+			startTiming();
 			PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) AS c FROM "+tableName+" WHERE " + userField + " = ? && "+passField+" = ?");
 			regQ.setString(1, name);
 			regQ.setString(2, getMD5(password));
 			result = regQ.executeQuery();
+			this.sqlQueryTime += stopTiming();
+			this.sqlQueries++;
+
 			while(result.next()) {
 				if(result.getInt("c") > 0) {
 					return true;
@@ -500,7 +515,6 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	public boolean register(String name, String password) {
-
 		Connection connection = null;
 
 		if (this.MySQL) {
@@ -517,10 +531,13 @@ public class IceAuth extends JavaPlugin {
 			connection = this.manageSQLite.getConnection();
 		}
 		try {
+			startTiming();
 			PreparedStatement regQ = connection.prepareStatement("INSERT INTO "+tableName+" ("+userField+", "+passField+") VALUES(?,?)");
 			regQ.setString(1, name);
 			regQ.setString(2, getMD5(password));
 			regQ.executeUpdate();
+			this.sqlQueryTime += stopTiming();
+			this.sqlQueries++;
 
 			System.out.println("[IceAuth] Player "+name+" registered sucessfully.");
 
@@ -555,11 +572,13 @@ public class IceAuth extends JavaPlugin {
 				connection = this.manageSQLite.getConnection();
 			}
 			try {
-
+				startTiming();
 				PreparedStatement regQ = connection.prepareStatement("UPDATE "+tableName+" SET " + passField + " = ? WHERE " + userField + " = ?");
 				regQ.setString(1, getMD5(password));
 				regQ.setString(2, player.getName());
 				regQ.executeUpdate();
+				this.sqlQueryTime += stopTiming();
+				this.sqlQueries++;
 
 				player.sendMessage(ChatColor.GREEN + "Password updated sucessfully!");
 				System.out.println("[IceAuth] Player "+player.getName()+" changed his password!");
@@ -597,35 +616,36 @@ public class IceAuth extends JavaPlugin {
 		}
 	}
 
+	public void startTiming() {
+		this.timingNanos = System.nanoTime();
+	}
+
+	public long stopTiming() {
+		return System.nanoTime() - this.timingNanos;
+	}
+
 	public void tpPlayers(boolean msgLogin) {
-
+		startTiming();
 		for (Player player : this.getServer().getOnlinePlayers()) {
-
 			if(player != null && !checkAuth(player)) {
-				try {
+				String playerName = player.getName();
+				NLIData nli = notLoggedIn.get(playerName);
+				Location pos = nli.getLoc();
 
-					String playerName = player.getName();
-					NLIData nli = notLoggedIn.get(playerName);
-					Location pos = nli.getLoc();
+				if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 60) {
+					player.kickPlayer("You took too long to log in!");
+					System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
+					continue;
+				}
 
-					if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 60) {
-						player.kickPlayer("You took too long to log in!");
-						System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
-						continue;
-					}
+				player.teleport(pos);
 
-					player.teleport(pos);
-
-					if(msgLogin) {
-						msgPlayerLogin(player);
-					}
-
-				} catch(Exception ex) {
-					// Null Pointer Exception we don't really care about
+				if(msgLogin) {
+					msgPlayerLogin(player);
 				}
 			}
 		}
-
+		this.syncTaskTime += stopTiming();
 	}
 
 	// Data structures
@@ -675,8 +695,7 @@ public class IceAuth extends JavaPlugin {
 		@Override
 		public void run() {
 			threadRuns++;
-			if(threadRuns == 11) {
-				threadRuns = 0;
+			if(threadRuns % 11 == 0) {
 				tpPlayers(true);
 			} else {
 				tpPlayers(false);

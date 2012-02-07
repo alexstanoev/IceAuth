@@ -14,3 +14,6 @@ commands:
     changepassword:
         description: With this command you can change your password!
         usage:
+    iceauth:
+        description: Basic performance stats.
+        usage:

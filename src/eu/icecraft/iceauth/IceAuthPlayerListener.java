@@ -1,5 +1,8 @@
 package eu.icecraft.iceauth;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.bukkit.GameMode;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -10,13 +13,14 @@ import org.bukkit.event.player.PlayerLoginEvent.Result;
 
 public class IceAuthPlayerListener implements Listener {
 	private IceAuth plugin;
+	public static Map<String, String> shouldBeCancelled = new HashMap<String, String>();
 
 	public IceAuthPlayerListener(IceAuth instance) {
 		plugin = instance;
 	}
 
-	@EventHandler(priority = EventPriority.HIGHEST)
-	public void onPlayerLogin(PlayerLoginEvent event) {
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onPlayerLoginEarly(PlayerLoginEvent event) {
 		if(event.getResult() != Result.ALLOWED || event.getPlayer() == null) {
 			return;
 		}
@@ -27,6 +31,7 @@ public class IceAuthPlayerListener implements Listener {
 		for(Player p : plugin.getServer().getOnlinePlayers()) {
 			if(p.getName().toLowerCase().equals(event.getPlayer().getName().toLowerCase()) && plugin.checkAuth(p)) {
 				event.disallow(Result.KICK_OTHER, "There's an user logged in with that name!");
+				shouldBeCancelled.put(playername, "There's an user logged in with that name!");
 			}
 		}
 
@@ -36,10 +41,23 @@ public class IceAuthPlayerListener implements Listener {
 				|| (playername.equalsIgnoreCase("Notch")) // Enough Notch'es already!
 				|| (playername.equalsIgnoreCase("Player"))) {
 			event.disallow(Result.KICK_OTHER, "Name contained disallowed characters or was Player/Notch");
+			shouldBeCancelled.put(playername, "Name contained disallowed characters or was Player/Notch");
 		}
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR)
+	public void onPlayerLoginLate(PlayerLoginEvent event) { // That event should really be cancelled to prevent serious exploits
+		if(event.getPlayer() == null) return;
+
+		if(event.getResult() == Result.ALLOWED && shouldBeCancelled.containsKey(event.getPlayer().getName())) {
+			System.out.println("[IceAuth] Some plugin allowed a cancelled login event! Disabling at MONITOR level.");
+			event.disallow(Result.KICK_OTHER, shouldBeCancelled.get(event.getPlayer().getName()));
+		}
+
+		shouldBeCancelled.remove(event.getPlayer().getName());
+	}
+
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerKick(PlayerKickEvent event) {
 		if(event.isCancelled() || event.getPlayer() == null) {
 			return;
@@ -70,7 +88,10 @@ public class IceAuthPlayerListener implements Listener {
 			}
 		}
 
-		if(plugin.giveKits && !regged) plugin.giveKits(player);
+		if(!regged) {
+			if(plugin.firstSpawn != null) player.teleport(plugin.firstSpawn);
+			if(plugin.giveKits) plugin.giveKits(player);
+		}
 
 		plugin.addPlayerNotLoggedIn(player, player.getLocation(), regged);
 
@@ -83,7 +104,6 @@ public class IceAuthPlayerListener implements Listener {
 		player.getInventory().setChestplate(null);
 		player.getInventory().setLeggings(null);
 		player.getInventory().setBoots(null);
-
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR)
@@ -94,7 +114,6 @@ public class IceAuthPlayerListener implements Listener {
 		Player player = event.getPlayer();
 
 		plugin.removePlayerCache(player);
-
 	}
 
 	@EventHandler(priority = EventPriority.LOWEST)
@@ -170,5 +189,4 @@ public class IceAuthPlayerListener implements Listener {
 			event.setCancelled(true);
 		}
 	}
-
 }
