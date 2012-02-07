@@ -18,6 +18,7 @@ import java.util.logging.Logger;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -33,6 +34,8 @@ import com.alta189.sqlLibrary.SQLite.sqlCore;
 public class IceAuth extends JavaPlugin {
 	public String logPrefix = "[IceAuth] ";
 	public Logger log = Logger.getLogger("Minecraft");
+	private Configuration conf;
+
 	public mysqlCore manageMySQL;
 	public sqlCore manageSQLite;
 
@@ -65,6 +68,7 @@ public class IceAuth extends JavaPlugin {
 
 	@Override
 	public void onDisable() {
+		this.getServer().getScheduler().cancelTasks(this);
 		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " was disabled!");
 	}
 
@@ -74,7 +78,7 @@ public class IceAuth extends JavaPlugin {
 
 		if(!this.getDataFolder().exists()) this.getDataFolder().mkdir();
 		File confFile = new File(this.getDataFolder(), "config.yml");
-		Configuration conf = new Configuration(confFile);
+		conf = new Configuration(confFile);
 		if(!confFile.exists()) {
 			conf.setProperty("mysql.use", false);
 			conf.setProperty("mysql.dbHost", "localhost");
@@ -110,6 +114,19 @@ public class IceAuth extends JavaPlugin {
 		this.tableName = conf.getString("mysql.tableName");
 		this.userField = conf.getString("mysql.userField");
 		this.passField = conf.getString("mysql.passField");
+
+		World world = this.getServer().getWorlds().get(0);
+		try {
+			double x = Double.parseDouble(conf.getString("firstspawn.x"));
+			double y = Double.parseDouble(conf.getString("firstspawn.y"));
+			double z = Double.parseDouble(conf.getString("firstspawn.z"));
+			float yaw = Float.parseFloat(conf.getString("firstspawn.yaw"));
+			float pitch = Float.parseFloat(conf.getString("firstspawn.pitch"));
+
+			firstSpawn = new Location(world, x, y, z, yaw, pitch);
+		} catch(Exception firstExc) {
+			firstSpawn = this.getServer().getWorlds().get(0).getSpawnLocation();
+		}
 
 		if (this.MySQL) {
 			if (this.dbHost.equals(null)) { this.MySQL = false; this.log.severe(this.logPrefix + "MySQL is on, but host is not defined, defaulting to SQLite"); }
@@ -178,10 +195,12 @@ public class IceAuth extends JavaPlugin {
 		this.getServer().getPluginManager().registerEvents(blockListener, this);
 		this.getServer().getPluginManager().registerEvents(entityListener, this);
 
-		this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new PlayerSyncThread(), 20, 20);
+		this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new PlayerSyncThread(), 40, 40);
+
+		int registeredUsers = registeredUsers();
 
 		int timeToStart = Math.round(stopTiming() / 1000);
-		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " has been enabled in " + timeToStart + "ms.");
+		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " has been enabled in " + timeToStart + "ms. Loaded " + registeredUsers + " users.");
 	}
 
 	@Override
@@ -304,6 +323,34 @@ public class IceAuth extends JavaPlugin {
 			sender.sendMessage(ChatColor.YELLOW + "notRegistered size: " + this.notRegistered.size());
 			sender.sendMessage(ChatColor.YELLOW + "notLoggedIn size: " + this.notLoggedIn.size());
 			return true;
+		}
+
+		if(commandLabel.equalsIgnoreCase("setfirstspawn") && sender.isOp()) {
+			if(!(sender instanceof Player)) {
+				return false;
+			}
+			Player player = (Player) sender;
+
+			Location loc = player.getLocation();
+
+			conf.setProperty("firstspawn.x", loc.getX());
+			conf.setProperty("firstspawn.y", loc.getY());
+			conf.setProperty("firstspawn.z", loc.getZ());
+			conf.setProperty("firstspawn.yaw", loc.getYaw());
+			conf.setProperty("firstspawn.pitch", loc.getPitch());
+			conf.save();
+
+			this.firstSpawn = loc;
+			player.sendMessage(ChatColor.GREEN + "First spawn point set sucessfully.");
+			return true;
+		}
+
+		if(commandLabel.equalsIgnoreCase("firstspawn")) {
+			if(!(sender instanceof Player)) {
+				return false;
+			}
+			Player player = (Player) sender;
+			player.teleport(firstSpawn);
 		}
 
 		return false;
@@ -610,6 +657,50 @@ public class IceAuth extends JavaPlugin {
 		}
 
 		return false;
+	}
+
+	public int registeredUsers() {
+
+		ResultSet result = null;
+
+		Connection connection = null;
+
+		if (this.MySQL) {
+			try {
+				connection = this.manageMySQL.getConnection();
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			} catch (InstantiationException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			}
+		} else {
+			connection = this.manageSQLite.getConnection();
+		}
+
+		try {
+			startTiming();
+			PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) AS c FROM "+tableName);
+			result = regQ.executeQuery();
+			this.sqlQueryTime += stopTiming();
+			this.sqlQueries++;
+
+			while(result.next()) {
+				return result.getInt("c");
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				result.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return 0;
 	}
 
 	public void giveKits(Player player) {

@@ -17,3 +17,9 @@ commands:
     iceauth:
         description: Basic performance stats.
         usage:
+    setfirstspawn:
+        Description: Set where the player will spawn the first time he login.
+        Usage: /setfirstspawn
+    firstspawn:
+        Description: Teleport the player to the first spawn.
+        Usage: /firstspawn
