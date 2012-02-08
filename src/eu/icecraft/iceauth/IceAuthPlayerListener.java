@@ -116,6 +116,13 @@ public class IceAuthPlayerListener implements Listener {
 			plugin.msgPlayerLogin(player);
 			event.setMessage("");
 			event.setCancelled(true);
+			return;
+		}
+
+		if(plugin.hideChatNonLogged) {
+			for(Player p : event.getRecipients()) {
+				if(!plugin.checkAuth(p)) event.getRecipients().remove(p);
+			}
 		}
 	}
 

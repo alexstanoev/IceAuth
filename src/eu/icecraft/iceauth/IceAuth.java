@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -43,6 +42,8 @@ public class IceAuth extends JavaPlugin {
 	public List<String> kit;
 
 	public Location firstSpawn;
+
+	public boolean hideChatNonLogged = true;
 
 	public Boolean MySQL = false;
 	public String dbHost;
@@ -97,7 +98,9 @@ public class IceAuth extends JavaPlugin {
 
 			conf.setProperty("kits.enable", true);
 			conf.setProperty("kits.items", defaultKit);
-
+			
+			conf.setProperty("hideChatNonLogged", true);
+			
 			conf.save();
 		}
 
@@ -115,6 +118,8 @@ public class IceAuth extends JavaPlugin {
 		this.userField = conf.getString("mysql.userField");
 		this.passField = conf.getString("mysql.passField");
 
+		this.hideChatNonLogged = conf.getBoolean("hideChatNonLogged", true);
+		
 		World world = this.getServer().getWorlds().get(0);
 		try {
 			double x = Double.parseDouble(conf.getString("firstspawn.x"));
