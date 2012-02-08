@@ -112,7 +112,9 @@ public class IceAuthPlayerListener implements Listener {
 		}
 
 		if(plugin.hideChatNonLogged) {
-			for(Player p : event.getRecipients()) {
+			Player[] recipients = event.getRecipients().toArray(new Player[0]);
+			for(int r = 0; r < recipients.length; r++) {
+				Player p = recipients[r];
 				if(!plugin.checkAuth(p)) event.getRecipients().remove(p);
 			}
 		}
@@ -127,13 +129,9 @@ public class IceAuthPlayerListener implements Listener {
 		if(plugin.checkAuth(player)) {
 			return;
 		}
-		if(commandLabel.equalsIgnoreCase("/register")) {
-			return;
-		}
-		if(commandLabel.equalsIgnoreCase("/login")) {
-			return;
-		}
-		if(commandLabel.equalsIgnoreCase("/l")) {
+		if(commandLabel.equalsIgnoreCase("/register") ||
+				commandLabel.equalsIgnoreCase("/login") ||
+				commandLabel.equalsIgnoreCase("/l")) {
 			return;
 		}
 
