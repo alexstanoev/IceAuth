@@ -98,9 +98,9 @@ public class IceAuth extends JavaPlugin {
 
 			conf.setProperty("kits.enable", true);
 			conf.setProperty("kits.items", defaultKit);
-			
+
 			conf.setProperty("hideChatNonLogged", true);
-			
+
 			conf.save();
 		}
 
@@ -119,7 +119,7 @@ public class IceAuth extends JavaPlugin {
 		this.passField = conf.getString("mysql.passField");
 
 		this.hideChatNonLogged = conf.getBoolean("hideChatNonLogged", true);
-		
+
 		World world = this.getServer().getWorlds().get(0);
 		try {
 			double x = Double.parseDouble(conf.getString("firstspawn.x"));
@@ -262,7 +262,7 @@ public class IceAuth extends JavaPlugin {
 			}
 
 			if(checkLogin(playername, password)) {
-				player.sendMessage(ChatColor.GREEN + "Logged in successfully");
+				player.sendMessage(ChatColor.GREEN + "Logged in successfully.");
 
 				restoreInv(player);
 
@@ -400,10 +400,16 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	public void msgPlayerLogin(Player player) {
+		msgPlayerLogin(player, false);
+	}
+
+	public void msgPlayerLogin(Player player, boolean first) {
 		if(checkUnReg(player)) {
-			player.sendMessage(ChatColor.RED + "Use /register <password> to register!");
+			if(first) player.sendMessage(ChatColor.DARK_AQUA + "Welcome! You need to register to be able to move and build.");
+			player.sendMessage(ChatColor.GREEN + "Use /register <password> to register!");
 		} else {
-			player.sendMessage(ChatColor.RED + "Use /login <password> to log in!");
+			if(first) player.sendMessage(ChatColor.DARK_AQUA + "Welcome! You need to log in to be able to move and build.");
+			player.sendMessage(ChatColor.GREEN + "Use /login <password> to log in!");
 		}
 	}
 
@@ -806,7 +812,7 @@ public class IceAuth extends JavaPlugin {
 		@Override
 		public void run() {
 			threadRuns++;
-			if(threadRuns % 11 == 0) {
+			if(threadRuns % 15 == 0) {
 				tpPlayers(true);
 			} else {
 				tpPlayers(false);

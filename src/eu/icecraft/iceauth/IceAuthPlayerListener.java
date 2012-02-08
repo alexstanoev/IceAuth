@@ -5,6 +5,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
 
@@ -17,18 +18,15 @@ public class IceAuthPlayerListener implements Listener {
 
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerLoginEarly(PlayerLoginEvent event) {
-		if((event.getResult() != Result.ALLOWED && event.getResult() != Result.KICK_FULL) || event.getPlayer() == null) {
-			return;
-		}
-
+		if((event.getResult() != Result.ALLOWED && event.getResult() != Result.KICK_FULL) || event.getPlayer() == null) return;
 		Player player = event.getPlayer();
 		String playername = player.getName();
 
 		for(Player p : plugin.getServer().getOnlinePlayers()) {
 			if(p.getName().equalsIgnoreCase(playername)) {
 				if(!plugin.checkAuth(p)) {
-					p.kickPlayer("You logged in from another location");
-					System.out.println("[IceAuth] Duplicate player name for " + event.getPlayer().getName().toLowerCase() + ", kicked not logged in player");
+					p.kickPlayer("You logged in from another location.");
+					System.out.println("[IceAuth] Duplicate player name for " + event.getPlayer().getName().toLowerCase() + ", kicked not logged in player.");
 				} else {
 					event.disallow(Result.KICK_OTHER, "There's an user logged in with that name!");
 					System.out.println("[IceAuth] Cancelled early login event, duplicate name for " + event.getPlayer().getName().toLowerCase());	
@@ -48,9 +46,7 @@ public class IceAuthPlayerListener implements Listener {
 
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerKick(PlayerKickEvent event) {
-		if(event.isCancelled() || event.getPlayer() == null) {
-			return;
-		}
+		if(event.isCancelled() || event.getPlayer() == null) return;
 		Player player = event.getPlayer();
 
 		if(event.getReason().contains("logged in from another location")) {
@@ -62,9 +58,7 @@ public class IceAuthPlayerListener implements Listener {
 
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void onPlayerJoin(PlayerJoinEvent event) {
-		if(event.getPlayer() == null) {
-			return;
-		}
+		if(event.getPlayer() == null) return;
 		Player player = event.getPlayer();
 
 		boolean regged = plugin.isRegistered(player.getName());
@@ -84,7 +78,7 @@ public class IceAuthPlayerListener implements Listener {
 
 		plugin.addPlayerNotLoggedIn(player, player.getLocation(), regged);
 
-		plugin.msgPlayerLogin(player);
+		plugin.msgPlayerLogin(player, true);
 
 		player.setGameMode(GameMode.SURVIVAL);
 
@@ -107,9 +101,7 @@ public class IceAuthPlayerListener implements Listener {
 
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerChat(PlayerChatEvent event) {
-		if(event.isCancelled() || event.getPlayer() == null) {
-			return;
-		}
+		if(event.isCancelled() || event.getPlayer() == null) return;
 		Player player = event.getPlayer();
 
 		if(!plugin.checkAuth(player)) {
@@ -128,9 +120,7 @@ public class IceAuthPlayerListener implements Listener {
 
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) {
-		if(event.isCancelled() || event.getPlayer() == null) {
-			return;
-		}
+		if(event.isCancelled() || event.getPlayer() == null) return;
 		Player player = event.getPlayer();
 		String commandLabel = event.getMessage().split(" ")[0];
 
@@ -155,9 +145,7 @@ public class IceAuthPlayerListener implements Listener {
 
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerPickupItem(PlayerPickupItemEvent event) {
-		if(event.isCancelled() || event.getPlayer() == null) {
-			return;
-		}
+		if(event.isCancelled() || event.getPlayer() == null) return;
 		Player player = event.getPlayer();
 		if(!plugin.checkAuth(player)) {
 			event.setCancelled(true);
@@ -166,9 +154,8 @@ public class IceAuthPlayerListener implements Listener {
 
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerDropItem(PlayerDropItemEvent event) {
-		if(event.isCancelled() || event.getPlayer() == null) {
-			return;
-		}
+		if(event.isCancelled() || event.getPlayer() == null) return;
+
 		Player player = event.getPlayer();
 		if(!plugin.checkAuth(player)) {
 			event.setCancelled(true);
@@ -177,11 +164,27 @@ public class IceAuthPlayerListener implements Listener {
 
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerInteract(PlayerInteractEvent event) {
-		if(event.isCancelled() || event.getPlayer() == null) {
-			return;
-		}
+		if(event.isCancelled() || event.getPlayer() == null) return;
 		Player player = event.getPlayer();
 		if(!plugin.checkAuth(player)) {
+			event.setCancelled(true);
+		}
+	}
+
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+		if (event.isCancelled() || event.getPlayer() == null) return;
+		Player player = event.getPlayer();
+		if (!plugin.checkAuth(player)) {
+			event.setCancelled(true);
+		}
+	}
+
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onFoodLevelChange(FoodLevelChangeEvent event) {
+		if (event.isCancelled() || !(event.getEntity() instanceof Player)) return;
+		Player player = (Player) event.getEntity();
+		if (!plugin.checkAuth(player)) {
 			event.setCancelled(true);
 		}
 	}
