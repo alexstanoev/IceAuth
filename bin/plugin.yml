@@ -23,3 +23,6 @@ commands:
     firstspawn:
         Description: Teleport the player to the first spawn.
         Usage: /firstspawn
+    ref:
+        Description: Get referral link
+        Usage: /ref

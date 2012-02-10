@@ -73,7 +73,8 @@ public class IceAuthPlayerListener implements Listener {
 
 		if(!regged) {
 			if(plugin.firstSpawn != null) player.teleport(plugin.firstSpawn);
-			if(plugin.giveKits) plugin.giveKits(player);
+			if(plugin.giveKits && plugin.checkInvEmpty(player.getInventory().getContents())) plugin.giveKits(player);
+			if(plugin.useReferrals) plugin.ref.onJoinNonReg(player); // Referrals
 		}
 
 		plugin.addPlayerNotLoggedIn(player, player.getLocation(), regged);
@@ -95,7 +96,8 @@ public class IceAuthPlayerListener implements Listener {
 			return;
 		}
 		Player player = event.getPlayer();
-
+		
+		plugin.recalculateOnlineTime(player);
 		plugin.removePlayerCache(player);
 	}
 

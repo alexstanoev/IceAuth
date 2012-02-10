@@ -44,6 +44,7 @@ public class IceAuth extends JavaPlugin {
 	public Location firstSpawn;
 
 	public boolean hideChatNonLogged = true;
+	public boolean useReferrals = false;
 
 	public Boolean MySQL = false;
 	public String dbHost;
@@ -54,18 +55,19 @@ public class IceAuth extends JavaPlugin {
 	public String userField;
 	public String passField;
 
-	public ArrayList<String> playersLoggedIn = new ArrayList<String>();
+	public Map<String, LoggedInPlayer> playersLoggedIn = new HashMap<String, LoggedInPlayer>();
 	public ArrayList<String> notRegistered = new ArrayList<String>();
 	public Map<String, NLIData> notLoggedIn = new HashMap<String, NLIData>();
 
-	public int threadRuns;
-	public int sqlQueries = 0;
-	public long timingMicros;
-	public long sqlQueryTime;
-	public long syncTaskTime;
+	public static int threadRuns;
+	public static int sqlQueries = 0;
+	public static long timingMicros;
+	public static long sqlQueryTime;
+	public static long syncTaskTime;
 
 	public MessageDigest md5;
 	public NLICacheHandler nch;
+	public Referrals ref;
 
 	@Override
 	public void onDisable() {
@@ -100,6 +102,7 @@ public class IceAuth extends JavaPlugin {
 			conf.setProperty("kits.items", defaultKit);
 
 			conf.setProperty("hideChatNonLogged", true);
+			conf.setProperty("useReferrals", false);
 
 			conf.save();
 		}
@@ -119,6 +122,7 @@ public class IceAuth extends JavaPlugin {
 		this.passField = conf.getString("mysql.passField");
 
 		this.hideChatNonLogged = conf.getBoolean("hideChatNonLogged", true);
+		this.useReferrals = conf.getBoolean("useReferrals", false);
 
 		World world = this.getServer().getWorlds().get(0);
 		try {
@@ -180,9 +184,11 @@ public class IceAuth extends JavaPlugin {
 			this.manageSQLite.initialize();
 
 			if (!this.manageSQLite.checkTable(tableName)) {
-				this.manageSQLite.createTable("CREATE TABLE auth (id INT AUTO_INCREMENT PRIMARY_KEY, username VARCHAR(30), password VARCHAR(50));");
+				this.manageSQLite.createTable("CREATE TABLE auth (id INT AUTO_INCREMENT PRIMARY_KEY, username VARCHAR(30), password VARCHAR(50));"); // TODO: update
 			}
 		}
+
+		ref = new Referrals(this.manageMySQL); // Yes, manageMySQL can be null. I'll fix that some day.
 
 		try {
 			this.md5 = MessageDigest.getInstance("MD5");
@@ -232,7 +238,17 @@ public class IceAuth extends JavaPlugin {
 				return false;
 			}
 
-			player.sendMessage(ChatColor.GREEN + "Registered successfully! Use /login <password>");
+			player.sendMessage(ChatColor.GREEN + "Registered successfully! You have been logged in.");
+
+			restoreInv(player);
+
+			NLIData nli = notLoggedIn.get(player.getName());
+			player.setGameMode(nli.getGameMode());
+
+			delPlayerNotLoggedIn(player);
+			addAuthPlayer(player);
+
+			ref.onRegister(player);
 
 			return true;
 		}
@@ -305,25 +321,25 @@ public class IceAuth extends JavaPlugin {
 		}
 
 		if(commandLabel.equalsIgnoreCase("iceauth") && sender.isOp()) {
-			int sqlMillis = Math.round(this.sqlQueryTime / 1000);
+			int sqlMillis = Math.round(IceAuth.sqlQueryTime / 1000);
 			String sqlMsg = null;
 			if(sqlMillis == 0) {
-				sqlMsg = this.sqlQueryTime + "us.";
+				sqlMsg = IceAuth.sqlQueryTime + "us.";
 			} else {
 				sqlMsg = sqlMillis + "ms.";
 			}
 
-			int taskMillis = Math.round(this.syncTaskTime / 1000);
+			int taskMillis = Math.round(IceAuth.syncTaskTime / 1000);
 			String taskMsg = null;
 			if(taskMillis == 0) {
-				taskMsg =  this.syncTaskTime + "us.";
+				taskMsg =  IceAuth.syncTaskTime + "us.";
 			} else {
 				taskMsg = taskMillis + "ms.";
 			}
 
 			sender.sendMessage(ChatColor.YELLOW + "=== IceAuth performance stats ===");
-			sender.sendMessage(ChatColor.YELLOW + "Time taken for SQL queries: " + sqlMsg + " over " + this.sqlQueries + " queries.");
-			sender.sendMessage(ChatColor.YELLOW + "Time taken for sync task: " + taskMsg + " over " + this.threadRuns + " runs.");
+			sender.sendMessage(ChatColor.YELLOW + "Time taken for SQL queries: " + sqlMsg + " over " + IceAuth.sqlQueries + " queries.");
+			sender.sendMessage(ChatColor.YELLOW + "Time taken for sync task: " + taskMsg + " over " + IceAuth.threadRuns + " runs.");
 			sender.sendMessage(ChatColor.YELLOW + "playersLoggedIn size: " + this.playersLoggedIn.size());
 			sender.sendMessage(ChatColor.YELLOW + "notRegistered size: " + this.notRegistered.size());
 			sender.sendMessage(ChatColor.YELLOW + "notLoggedIn size: " + this.notLoggedIn.size());
@@ -358,15 +374,23 @@ public class IceAuth extends JavaPlugin {
 			player.teleport(firstSpawn);
 		}
 
+		if(commandLabel.equalsIgnoreCase("ref")) {
+			if(!(sender instanceof Player)) {
+				return false;
+			}
+			Player player = (Player) sender;
+			if(useReferrals) ref.refLinkCmd(player);
+		}
+
 		return false;
 	}
 
 	public void addAuthPlayer(Player player) {
-		playersLoggedIn.add(player.getName());	
+		playersLoggedIn.put(player.getName(), getLoginData(player));
 	}
 
 	public boolean checkAuth(Player player) {
-		return playersLoggedIn.contains(player.getName());
+		return playersLoggedIn.containsKey(player.getName());
 	}
 
 	public boolean checkUnReg(Player player) {
@@ -514,8 +538,8 @@ public class IceAuth extends JavaPlugin {
 			PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) AS c FROM "+tableName+" WHERE " + userField + " = ?");
 			regQ.setString(1, name);
 			result = regQ.executeQuery();
-			this.sqlQueryTime += stopTiming();
-			this.sqlQueries++;
+			IceAuth.sqlQueryTime += stopTiming();
+			IceAuth.sqlQueries++;
 
 			while(result.next()) {
 				if(result.getInt("c") > 0) {
@@ -562,8 +586,8 @@ public class IceAuth extends JavaPlugin {
 			regQ.setString(1, name);
 			regQ.setString(2, getMD5(password));
 			result = regQ.executeQuery();
-			this.sqlQueryTime += stopTiming();
-			this.sqlQueries++;
+			IceAuth.sqlQueryTime += stopTiming();
+			IceAuth.sqlQueries++;
 
 			while(result.next()) {
 				if(result.getInt("c") > 0) {
@@ -605,12 +629,13 @@ public class IceAuth extends JavaPlugin {
 		}
 		try {
 			startTiming();
-			PreparedStatement regQ = connection.prepareStatement("INSERT INTO "+tableName+" ("+userField+", "+passField+") VALUES(?,?)");
+			PreparedStatement regQ = connection.prepareStatement("INSERT INTO "+tableName+" ("+userField+", "+passField+", registeredOn) VALUES(?,?,?)"); // TODO: Un-hardcode field
 			regQ.setString(1, name);
 			regQ.setString(2, getMD5(password));
+			regQ.setInt(3, (int)System.currentTimeMillis() / 1000);
 			regQ.executeUpdate();
-			this.sqlQueryTime += stopTiming();
-			this.sqlQueries++;
+			IceAuth.sqlQueryTime += stopTiming();
+			IceAuth.sqlQueries++;
 
 			System.out.println("[IceAuth] Player "+name+" registered sucessfully.");
 
@@ -650,8 +675,8 @@ public class IceAuth extends JavaPlugin {
 				regQ.setString(1, getMD5(password));
 				regQ.setString(2, player.getName());
 				regQ.executeUpdate();
-				this.sqlQueryTime += stopTiming();
-				this.sqlQueries++;
+				IceAuth.sqlQueryTime += stopTiming();
+				IceAuth.sqlQueries++;
 
 				player.sendMessage(ChatColor.GREEN + "Password updated sucessfully!");
 				System.out.println("[IceAuth] Player "+player.getName()+" changed his password!");
@@ -694,8 +719,8 @@ public class IceAuth extends JavaPlugin {
 			startTiming();
 			PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) AS c FROM "+tableName);
 			result = regQ.executeQuery();
-			this.sqlQueryTime += stopTiming();
-			this.sqlQueries++;
+			IceAuth.sqlQueryTime += stopTiming();
+			IceAuth.sqlQueries++;
 
 			while(result.next()) {
 				return result.getInt("c");
@@ -712,6 +737,126 @@ public class IceAuth extends JavaPlugin {
 		}
 
 		return 0;
+	}
+
+	public LoggedInPlayer getLoginData(Player player) {
+
+		ResultSet result = null;
+		Connection connection = null;
+		int onlineMins = 0;
+		boolean wasReferred = false;
+		String referredBy = null;
+
+		if (this.MySQL) {
+			try {
+				connection = this.manageMySQL.getConnection();
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			} catch (InstantiationException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			}
+		} else {
+			connection = this.manageSQLite.getConnection();
+		}
+
+		try {
+			startTiming();
+			PreparedStatement regQ = connection.prepareStatement("SELECT onlineMins FROM "+tableName+" WHERE "+tableName+"."+userField+" = ?");
+			regQ.setString(1, player.getName());
+			result = regQ.executeQuery();
+			IceAuth.sqlQueryTime += stopTiming();
+			IceAuth.sqlQueries++;
+
+			while(result.next()) {
+				onlineMins = result.getInt("onlineMins");
+			}
+
+			startTiming();
+			PreparedStatement regQ1 = connection.prepareStatement("SELECT referred_by FROM referrals WHERE ign = ? AND hasplayed = 0");
+			regQ1.setString(1, player.getName());
+			result = regQ1.executeQuery();
+			IceAuth.sqlQueryTime += stopTiming();
+			IceAuth.sqlQueries++;
+
+			while(result.next()) {
+				wasReferred = true;
+				referredBy = result.getString("referred_by");
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				result.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return new LoggedInPlayer((int) System.currentTimeMillis()/1000, onlineMins, wasReferred, referredBy);
+	}
+
+	public void recalculateOnlineTime(Player player) {
+		LoggedInPlayer lp = playersLoggedIn.get(player.getName());
+
+		int onlineTimeMins = Math.round(lp.getOnlineTime() + ((((int)System.currentTimeMillis()/1000) - lp.getLoggedInAt()) / 60));
+		Connection connection = null;
+		if (this.MySQL) {
+			try {
+				connection = this.manageMySQL.getConnection();
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			} catch (InstantiationException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			}
+		} else {
+			connection = this.manageSQLite.getConnection();
+		}
+
+		try {
+			startTiming();
+			PreparedStatement regQ = connection.prepareStatement("UPDATE "+tableName+" SET onlineMins = onlineMins + ? WHERE name = ?"); // TODO: Un-hardcode field
+			regQ.setInt(1, onlineTimeMins);
+			regQ.setString(2, player.getName());
+			regQ.executeUpdate();
+			IceAuth.sqlQueryTime += stopTiming();
+			IceAuth.sqlQueries++;
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void markPlayerPaid(Player player) {
+
+		Connection connection = null;
+		if (this.MySQL) {
+			try {
+				connection = this.manageMySQL.getConnection();
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			} catch (InstantiationException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			}
+		} else {
+			connection = this.manageSQLite.getConnection();
+		}
+
+		try {
+			startTiming();
+			PreparedStatement regQ = connection.prepareStatement("UPDATE referrals SET hasplayed = 1 WHERE ign = ?");
+			regQ.setString(1, player.getName());
+			regQ.executeUpdate();
+			IceAuth.sqlQueryTime += stopTiming();
+			IceAuth.sqlQueries++;
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void giveKits(Player player) {
@@ -733,18 +878,19 @@ public class IceAuth extends JavaPlugin {
 		}
 	}
 
-	public void startTiming() {
-		this.timingMicros = System.nanoTime()/1000;
+	public static void startTiming() {
+		IceAuth.timingMicros = System.nanoTime()/1000;
 	}
 
-	public long stopTiming() {
-		return (System.nanoTime()/1000) - this.timingMicros;
+	public static long stopTiming() {
+		return (System.nanoTime()/1000) - IceAuth.timingMicros;
 	}
 
 	public void tpPlayers(boolean msgLogin) {
 		startTiming();
 		for (Player player : this.getServer().getOnlinePlayers()) {
-			if(player != null && !checkAuth(player)) {
+			if(player == null) continue;
+			if(!checkAuth(player)) {
 				String playerName = player.getName();
 				NLIData nli = notLoggedIn.get(playerName);
 				Location pos = nli.getLoc();
@@ -760,9 +906,22 @@ public class IceAuth extends JavaPlugin {
 				if(msgLogin) {
 					msgPlayerLogin(player);
 				}
+			} else {
+				if(msgLogin && useReferrals) {
+					// There has to be a better place for this
+					LoggedInPlayer lp = playersLoggedIn.get(player.getName());
+					if(lp.isReferred()) {
+						int playTime = Math.round(lp.getOnlineTime() + ((((int)System.currentTimeMillis()/1000) - lp.getLoggedInAt()) / 60));
+						if(playTime >= 1) { // 4*60
+							ref.rewardPlayer(player, lp.getReferredBy());
+							markPlayerPaid(player);
+							System.out.println("[IceAuth Referrals] Rewarded player: "+player.getName() + ", referred by: " + lp.getReferredBy());
+						}
+					}
+				}
 			}
 		}
-		this.syncTaskTime += stopTiming();
+		IceAuth.syncTaskTime += stopTiming();
 	}
 
 	// Data structures
@@ -808,6 +967,36 @@ public class IceAuth extends JavaPlugin {
 		}
 	}
 
+	public class LoggedInPlayer {
+		private int loggedInAt;
+		private int onlineTime;
+		private boolean isReferred;
+		private String referredBy;
+
+		public LoggedInPlayer(int loggedInAt, int onlineTime, boolean isReferred, String referredBy) {
+			this.loggedInAt = loggedInAt;
+			this.onlineTime = onlineTime;
+			this.isReferred = isReferred;
+			this.referredBy = referredBy;
+		}
+
+		public int getLoggedInAt() {
+			return loggedInAt;
+		}
+
+		public int getOnlineTime() {
+			return onlineTime;
+		}
+
+		public boolean isReferred() {
+			return isReferred;
+		}
+
+		public String getReferredBy() {
+			return referredBy;
+		}
+	}
+
 	public class PlayerSyncThread implements Runnable {
 		@Override
 		public void run() {
@@ -818,7 +1007,6 @@ public class IceAuth extends JavaPlugin {
 				tpPlayers(false);
 			}
 		}
-
 	}
 
 }
