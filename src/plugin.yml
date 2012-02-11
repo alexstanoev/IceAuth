@@ -26,3 +26,6 @@ commands:
     ref:
         Description: Get referral link
         Usage: /ref
+    onlinetime:
+        Description: Get player online time
+        Usage: /onlinetime
