@@ -29,3 +29,9 @@ commands:
     onlinetime:
         Description: Get player online time
         Usage: /onlinetime
+    ipseen:
+        Description: IP seen
+        Usage: /ipseen
+    ipinfo:
+        Description: IP info
+        Usage: /ipinfo

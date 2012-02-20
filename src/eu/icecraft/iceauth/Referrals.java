@@ -25,14 +25,13 @@ public class Referrals {
 
 	public void onJoinNonReg(Player p) {
 		String referredBy = isReferred(p, false);
-		if(referredBy != null) p.sendMessage(ChatColor.YELLOW + "You have been referred by " +  ChatColor.WHITE + referredBy);
+		if(referredBy != null) p.sendMessage(ChatColor.GOLD + "You have been referred by " +  ChatColor.DARK_AQUA + referredBy);
 	}
 
 	public void onRegister(Player p) {
 		String referredBy = isReferred(p, true);
 		if(referredBy != null) {
-			p.sendMessage(ChatColor.YELLOW + "You have been referred by " + ChatColor.WHITE + referredBy);
-			p.sendMessage(ChatColor.YELLOW + "Play for 4 hours to get your rewards!");
+			p.sendMessage(ChatColor.YELLOW + "Play for 4 hours to get your referral rewards!");
 		}
 	}
 
@@ -40,7 +39,7 @@ public class Referrals {
 		String playerName = p.getName();
 		String refLink = getRefLink(playerName);
 		if(refLink == null) {
-			refLink = insertRefLink(playerName);
+			refLink = insertRefLink(playerName, p.getAddress().getAddress().getHostAddress());
 		}
 		p.sendMessage(ChatColor.DARK_AQUA + "Your referral link is: " + ChatColor.GOLD + "http://icecraft-mc.eu/?r=" + refLink);
 	}
@@ -49,12 +48,14 @@ public class Referrals {
 		try {
 			grantPlayer(player.getName(), 50);
 			plugin.giveKits(player, plugin.referralKit, true); // TODO: possibly give players who registered after 24+ hours only money
-			player.sendMessage(ChatColor.GOLD + "You have received 50$ and items for getting referred by " + referredBy);
+
+			player.sendMessage(ChatColor.GOLD + "You've received $50 and items.");
+			player.sendMessage(ChatColor.GOLD + "For being referred by " + ChatColor.DARK_AQUA + referredBy);
 
 			grantPlayer(referredBy, 100);
 			Player referer = Bukkit.getServer().getPlayerExact(referredBy);
 			if(referer != null) {
-				referer.sendMessage(ChatColor.GOLD + "You have received 100$ for referring " + player.getName());
+				referer.sendMessage(ChatColor.GOLD + "You have received $100 for referring " + ChatColor.DARK_AQUA + player.getName());
 			}
 		} catch(NoClassDefFoundError err) {
 			System.out.println("[IceAuth Referrals] iConomy not found.");
@@ -85,16 +86,17 @@ public class Referrals {
 		return null;
 	}
 
-	public String insertRefLink(String playerName) {
+	public String insertRefLink(String playerName, String ip) {
 		Connection connection = null;
 		String refLink = null;
 		try {
 			connection = this.db.getConnection();
 
 			IceAuth.startTiming();
-			PreparedStatement regQ = connection.prepareStatement("INSERT INTO reflinks (ign, date) VALUES(?, ?)", Statement.RETURN_GENERATED_KEYS);
+			PreparedStatement regQ = connection.prepareStatement("INSERT INTO reflinks (ign, date, ip) VALUES(?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
 			regQ.setString(1, playerName);
 			regQ.setInt(2, (int) (System.currentTimeMillis() / 1000));
+			regQ.setString(3, ip);
 			regQ.executeUpdate();
 			IceAuth.sqlQueryTime += IceAuth.stopTiming();
 			IceAuth.sqlQueries++;

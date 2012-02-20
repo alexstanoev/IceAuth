@@ -48,7 +48,7 @@ public class IceAuth extends JavaPlugin {
 	public boolean hideChatNonLogged = true;
 	public boolean useReferrals = false;
 
-	public Boolean MySQL = false;
+	public boolean MySQL = false;
 	public String dbHost;
 	public String dbUser;
 	public String dbPass;
@@ -184,7 +184,7 @@ public class IceAuth extends JavaPlugin {
 			this.manageSQLite.initialize();
 
 			if (!this.manageSQLite.checkTable(tableName)) {
-				this.manageSQLite.createTable("CREATE TABLE auth (id INT AUTO_INCREMENT PRIMARY_KEY, username VARCHAR(30), password VARCHAR(50));"); // TODO: update
+				this.manageSQLite.createTable("CREATE TABLE auth (id INT AUTO_INCREMENT PRIMARY_KEY, username VARCHAR(30), password VARCHAR(50));");
 			}
 		}
 
@@ -251,6 +251,8 @@ public class IceAuth extends JavaPlugin {
 
 			ref.onRegister(player);
 
+			this.getServer().getPluginManager().callEvent(new AuthPlayerLoginEvent(player, true));
+
 			return true;
 		}
 
@@ -288,6 +290,11 @@ public class IceAuth extends JavaPlugin {
 
 				delPlayerNotLoggedIn(player);
 				addAuthPlayer(player);
+
+				if(getIP(playername, true) == null) updateIP(playername, player.getAddress().getAddress().getHostAddress(), true); // Fill in missing register IPs
+				updateIP(playername, player.getAddress().getAddress().getHostAddress());
+
+				this.getServer().getPluginManager().callEvent(new AuthPlayerLoginEvent(player, false));
 
 				return true;
 			} else {
@@ -387,9 +394,106 @@ public class IceAuth extends JavaPlugin {
 
 		if(commandLabel.equalsIgnoreCase("onlinetime")) {
 			if(args.length != 1) return false;
-			LoggedInPlayer lp = getLoginData(args[0]);
-			int playTime = Math.round(lp.getOnlineTime() + (((int)(System.currentTimeMillis()/1000) - lp.getLoggedInAt())));
-			sender.sendMessage(ChatColor.YELLOW + "Player " + ChatColor.DARK_AQUA + args[0] + ChatColor.YELLOW + " has been online for " + ChatColor.DARK_AQUA + getDetailedTimeString(playTime));
+			LoggedInPlayer lp = null;
+			if(playersLoggedIn.containsKey(args[0])) {
+				lp = playersLoggedIn.get(args[0]);
+			} else {
+				lp = getLoginData(args[0]);
+			}
+			int playTime = Math.round(lp.getOnlineTime() + (((int)(System.currentTimeMillis()/1000L) - lp.getLoggedInAt())));
+			if(playTime == 0) {
+				sender.sendMessage(ChatColor.RED + "Not enough data collected for that player.");
+			} else {
+				sender.sendMessage(ChatColor.DARK_AQUA + args[0] + "'s" + ChatColor.YELLOW + " game time is " + ChatColor.GRAY + getDetailedTimeString(playTime));
+			}
+			return true;
+		}
+
+		if(commandLabel.equalsIgnoreCase("ipseen")) {
+			if(args.length != 1 || !sender.hasPermission("iceauth.ipseen")) return false;
+			ResultSet result = null;
+			try {
+				Connection connection = null;
+
+				if (this.MySQL) {
+					try {
+						connection = this.manageMySQL.getConnection();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				} else {
+					connection = this.manageSQLite.getConnection();
+				}
+
+				String ip = getIP(args[0]);
+				if(ip == null) {
+					sender.sendMessage(ChatColor.RED + "Player not found in history!");
+					return true;
+				}
+
+				PreparedStatement regQ = connection.prepareStatement("SELECT "+userField+" FROM "+tableName+" WHERE "+tableName+".ip = ?");
+				regQ.setString(1, ip);
+				result = regQ.executeQuery();
+
+				sender.sendMessage("All accounts on IP " + ip + ", player " + args[0] + ":");
+				StringBuilder names = new StringBuilder();
+				while(result.next()) {
+					names.append(result.getString(userField)).append(", ");
+				}
+				names.deleteCharAt(names.length() - 2);
+				sender.sendMessage(ChatColor.AQUA + names.toString());
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				try {
+					result.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+
+			return true;
+		}
+
+		if(commandLabel.equalsIgnoreCase("ipinfo")) {
+			if(args.length != 1 || !sender.hasPermission("iceauth.ipinfo")) return false;
+			ResultSet result = null;
+			try {
+				Connection connection = null;
+
+				if (this.MySQL) {
+					try {
+						connection = this.manageMySQL.getConnection();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				} else {
+					connection = this.manageSQLite.getConnection();
+				}
+
+				PreparedStatement regQ = connection.prepareStatement("SELECT "+userField+" FROM "+tableName+" WHERE ip = ?");
+				regQ.setString(1, args[0]);
+				result = regQ.executeQuery();
+
+				sender.sendMessage("All accounts on IP " + args[0] + ":");
+				StringBuilder names = new StringBuilder();
+				while(result.next()) {
+					names.append(result.getString(userField)).append(", ");
+				}
+				names.deleteCharAt(names.length() - 2);
+				sender.sendMessage(ChatColor.AQUA + names.toString());
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				try {
+					result.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+
 			return true;
 		}
 
@@ -418,7 +522,7 @@ public class IceAuth extends JavaPlugin {
 		notRegistered.remove(pName);
 	}
 
-	public void addPlayerNotLoggedIn(Player player, Location loc, Boolean registered) {
+	public void addPlayerNotLoggedIn(Player player, Location loc, boolean registered) {
 		NLIData nli = new NLIData(loc, (int) (System.currentTimeMillis() / 1000L), player.getInventory().getContents(), player.getInventory().getArmorContents(), player.getGameMode());
 		notLoggedIn.put(player.getName(), nli);
 		if(!registered) notRegistered.add(player.getName());
@@ -730,6 +834,65 @@ public class IceAuth extends JavaPlugin {
 		return 0;
 	}
 
+	public String getIP(String nick) {
+		return getIP(nick, false);
+	}
+
+	public String getIP(String nick, boolean registerIP) {
+		ResultSet result = null;
+		try {
+			Connection connection = null;
+
+			if (this.MySQL) {
+				try {
+					connection = this.manageMySQL.getConnection();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			} else {
+				connection = this.manageSQLite.getConnection();
+			}
+
+			PreparedStatement regQ = connection.prepareStatement("SELECT registerIP, lastIP FROM "+tableName+" WHERE "+tableName+"."+userField+" = ?");
+			regQ.setString(1, nick);
+			result = regQ.executeQuery();
+
+			while(result.next()) {
+				return registerIP ? result.getString("registerIP") : result.getString("lastIP");
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				result.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return null;
+	}
+
+	public void updateIP(String nick, String ip) {
+		updateIP(nick, ip, false);
+	}
+
+	public void updateIP(String nick, String ip, boolean registerIP) {
+		Connection connection = null;
+		try {
+			if (this.MySQL) {
+				connection = this.manageMySQL.getConnection();
+			} else {
+				connection = this.manageSQLite.getConnection();
+			}
+			PreparedStatement regQupd = connection.prepareStatement("UPDATE "+tableName+" SET " + (registerIP ? "registerIP" : "lastIP") + " = ? WHERE nick = ?");
+			regQupd.setString(1, ip);
+			regQupd.setString(2, nick);
+			regQupd.executeUpdate();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
 	public LoggedInPlayer getLoginData(String player) {
 
 		ResultSet result = null;
@@ -849,6 +1012,12 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	public static String getDetailedTimeString(long unixTime) {
+		return getDetailedTimeString(unixTime, true);
+	}
+
+	public static String getDetailedTimeString(long unixTime, boolean showSeconds) {
+		int n = (int)(unixTime / 86400L);
+		unixTime -= n * 86400;
 		int i = (int)(unixTime / 3600L);
 		unixTime -= i * 3600;
 		int j = (int)(unixTime / 60L);
@@ -857,9 +1026,16 @@ public class IceAuth extends JavaPlugin {
 
 		String str = "";
 
+		if (n > 0) {
+			str = str + n;
+			if (n == 1) str = str + " day";
+			else str = str + " days"; 
+		}
+
 		if (i > 0) {
-			str = str + i;
-			if (i == 1) str = str + " hour";
+			if ((n > 0) && (j > 0)) str = str + ", ";
+			else if ((n > 0) && (j == 0)) str = str + " and "; str = str + i;
+			if (i == 1) str = str + " hour"; 
 			else str = str + " hours"; 
 		}
 
@@ -870,13 +1046,13 @@ public class IceAuth extends JavaPlugin {
 			else str = str + " minutes"; 
 		}
 
-		if (k > 0) {
+		if (k > 0 && showSeconds) {
 			if ((i > 0) || (j > 0)) str = str + " and "; str = str + k;
 			if (k == 1) str = str + " second";
 			else str = str + " seconds";
 		}
 
-		return str + ".";
+		return str;
 	}
 
 	public void giveKits(Player player, List<String> items, boolean randomTwo) {
@@ -889,12 +1065,12 @@ public class IceAuth extends JavaPlugin {
 			for(String item : items) {
 				String[] parts = item.split(":");
 				if(parts.length != 3) continue;
-				
+
 				if(randomTwo) {
 					i++;
 					if(i > 2) break;
 				}
-				
+
 				int type = Integer.parseInt(parts[0]);
 				short damage = Short.parseShort(parts[1]);
 				int amount = Integer.parseInt(parts[2]);
