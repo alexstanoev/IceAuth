@@ -473,7 +473,7 @@ public class IceAuth extends JavaPlugin {
 				}
 
 				PreparedStatement regQ = connection.prepareStatement("SELECT "+userField+" FROM "+tableName+" WHERE ip = ?");
-				regQ.setString(1, args[0]);
+				regQ.setString(1, args[0].toLowerCase());
 				result = regQ.executeQuery();
 
 				sender.sendMessage("All accounts on IP " + args[0] + ":");
@@ -854,7 +854,7 @@ public class IceAuth extends JavaPlugin {
 			}
 
 			PreparedStatement regQ = connection.prepareStatement("SELECT registerIP, lastIP FROM "+tableName+" WHERE "+tableName+"."+userField+" = ?");
-			regQ.setString(1, nick);
+			regQ.setString(1, nick.toLowerCase());
 			result = regQ.executeQuery();
 
 			while(result.next()) {
@@ -884,7 +884,7 @@ public class IceAuth extends JavaPlugin {
 			} else {
 				connection = this.manageSQLite.getConnection();
 			}
-			PreparedStatement regQupd = connection.prepareStatement("UPDATE "+tableName+" SET " + (registerIP ? "registerIP" : "lastIP") + " = ? WHERE nick = ?");
+			PreparedStatement regQupd = connection.prepareStatement("UPDATE "+tableName+" SET " + (registerIP ? "registerIP" : "lastIP") + " = ? WHERE "+userField+" = ?");
 			regQupd.setString(1, ip);
 			regQupd.setString(2, nick);
 			regQupd.executeUpdate();
