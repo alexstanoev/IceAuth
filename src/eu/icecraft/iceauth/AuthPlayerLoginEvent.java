@@ -6,7 +6,7 @@ import org.bukkit.event.HandlerList;
 
 public class AuthPlayerLoginEvent extends Event {
 	private static final long serialVersionUID = 1L;
-    private static final HandlerList handlers = new HandlerList();
+	private static final HandlerList handlers = new HandlerList();
 	private Player player;
 	private boolean onRegister;
 
@@ -23,11 +23,11 @@ public class AuthPlayerLoginEvent extends Event {
 		return onRegister;
 	}
 
-    public HandlerList getHandlers() {
-        return handlers;
-    }
- 
-    public static HandlerList getHandlerList() {
-        return handlers;
-    }
+	public HandlerList getHandlers() {
+		return handlers;
+	}
+
+	public static HandlerList getHandlerList() {
+		return handlers;
+	}
 }

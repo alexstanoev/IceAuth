@@ -25,12 +25,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.config.Configuration;
 
 import com.alta189.sqlLibrary.MySQL.mysqlCore;
 import com.alta189.sqlLibrary.SQLite.sqlCore;
 
-@SuppressWarnings("deprecation")
+import eu.icecraft.iceauth.configCompat.Configuration;
+
 public class IceAuth extends JavaPlugin {
 	public String logPrefix = "[IceAuth] ";
 	public Logger log = Logger.getLogger("Minecraft");
