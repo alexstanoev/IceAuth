@@ -401,10 +401,11 @@ public class IceAuth extends JavaPlugin {
 				lp = getLoginData(args[0]);
 			}
 			int playTime = Math.round(lp.getOnlineTime() + (((int)(System.currentTimeMillis()/1000L) - lp.getLoggedInAt())));
-			if(playTime == 0) {
+			if(playTime <= 1) {
 				sender.sendMessage(ChatColor.RED + "Not enough data collected for that player.");
 			} else {
-				sender.sendMessage(ChatColor.DARK_AQUA + args[0] + "'s" + ChatColor.YELLOW + " game time is " + ChatColor.GRAY + getDetailedTimeString(playTime));
+				sender.sendMessage(ChatColor.DARK_AQUA + args[0] + ChatColor.YELLOW + " has played for:");
+				sender.sendMessage(ChatColor.GRAY + getDetailedTimeString(playTime));
 			}
 			return true;
 		}
@@ -431,17 +432,17 @@ public class IceAuth extends JavaPlugin {
 					return true;
 				}
 
-				PreparedStatement regQ = connection.prepareStatement("SELECT "+userField+" FROM "+tableName+" WHERE "+tableName+".ip = ?");
+				PreparedStatement regQ = connection.prepareStatement("SELECT "+userField+" FROM "+tableName+" WHERE "+tableName+".lastIP = ?");
 				regQ.setString(1, ip);
 				result = regQ.executeQuery();
 
-				sender.sendMessage("All accounts on IP " + ip + ", player " + args[0] + ":");
+				sender.sendMessage(ChatColor.GOLD + "All accounts on IP " + ChatColor.DARK_AQUA + ip + ChatColor.GOLD + ", player " + ChatColor.DARK_AQUA + args[0] + ChatColor.GOLD + ":");
 				StringBuilder names = new StringBuilder();
 				while(result.next()) {
 					names.append(result.getString(userField)).append(", ");
 				}
-				names.deleteCharAt(names.length() - 2);
-				sender.sendMessage(ChatColor.AQUA + names.toString());
+				if(names.length() > 2) names.deleteCharAt(names.length() - 2);
+				sender.sendMessage(ChatColor.YELLOW + names.toString());
 
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -472,17 +473,17 @@ public class IceAuth extends JavaPlugin {
 					connection = this.manageSQLite.getConnection();
 				}
 
-				PreparedStatement regQ = connection.prepareStatement("SELECT "+userField+" FROM "+tableName+" WHERE ip = ?");
+				PreparedStatement regQ = connection.prepareStatement("SELECT "+userField+" FROM "+tableName+" WHERE lastIP = ?");
 				regQ.setString(1, args[0].toLowerCase());
 				result = regQ.executeQuery();
 
-				sender.sendMessage("All accounts on IP " + args[0] + ":");
+				sender.sendMessage(ChatColor.GOLD + "All accounts on IP " + ChatColor.DARK_AQUA + args[0] + ChatColor.GOLD + ":");
 				StringBuilder names = new StringBuilder();
 				while(result.next()) {
 					names.append(result.getString(userField)).append(", ");
 				}
-				names.deleteCharAt(names.length() - 2);
-				sender.sendMessage(ChatColor.AQUA + names.toString());
+				if(names.length() > 2) names.deleteCharAt(names.length() - 2);
+				sender.sendMessage(ChatColor.YELLOW + names.toString());
 
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -673,7 +674,7 @@ public class IceAuth extends JavaPlugin {
 		return false;
 	}
 
-	public boolean checkLogin(String name, String password) { // fails at sqlite (or register, not tested)
+	public boolean checkLogin(String name, String password) {
 
 		ResultSet result = null;
 		Connection connection = null;
@@ -968,7 +969,7 @@ public class IceAuth extends JavaPlugin {
 
 		try {
 			startTiming();
-			PreparedStatement regQ = connection.prepareStatement("UPDATE "+tableName+" SET onlineMins = onlineMins + ? WHERE name = ?");
+			PreparedStatement regQ = connection.prepareStatement("UPDATE "+tableName+" SET onlineMins = ? WHERE name = ?");
 			regQ.setInt(1, onlineTimeMins);
 			regQ.setString(2, player.getName());
 			regQ.executeUpdate();
@@ -1123,8 +1124,8 @@ public class IceAuth extends JavaPlugin {
 					// There has to be a better place for this
 					LoggedInPlayer lp = playersLoggedIn.get(player.getName());
 					if(lp.isReferred()) {
-						int playTime = Math.round(lp.getOnlineTime() + (((int)(System.currentTimeMillis()/1000L) - lp.getLoggedInAt()))); System.out.println(player.getName() + " : " + playTime); // TODO: Remove debug code
-						if(playTime >= 60) { // 4*60
+						int playTime = Math.round(lp.getOnlineTime() + (((int)(System.currentTimeMillis()/1000L) - lp.getLoggedInAt())));
+						if(playTime >= 4*60*60) {
 							ref.rewardPlayer(player, lp.getReferredBy());
 							markPlayerPaid(player);
 							lp.setReferred(false);
