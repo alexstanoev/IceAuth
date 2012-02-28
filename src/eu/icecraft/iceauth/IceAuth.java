@@ -239,6 +239,9 @@ public class IceAuth extends JavaPlugin {
 				return false;
 			}
 
+			updateIP(player.getName(), player.getAddress().getAddress().getHostAddress(), true);
+			updateIP(player.getName(), player.getAddress().getAddress().getHostAddress());
+
 			player.sendMessage(ChatColor.GREEN + "Registered successfully! You have been logged in.");
 
 			restoreInv(player);
@@ -449,8 +452,7 @@ public class IceAuth extends JavaPlugin {
 			} finally {
 				try {
 					result.close();
-				} catch (SQLException e) {
-					e.printStackTrace();
+				} catch (Exception e) {
 				}
 			}
 
@@ -490,8 +492,7 @@ public class IceAuth extends JavaPlugin {
 			} finally {
 				try {
 					result.close();
-				} catch (SQLException e) {
-					e.printStackTrace();
+				} catch (Exception e) {
 				}
 			}
 

@@ -186,7 +186,7 @@ public class Referrals {
 	}
 
 	public static String generateUrlbyID(int in) {		
-		String index = "abcdefghijklmnopqrstuvwxyz0123456789";
+		String index = "abcdefghijklmnopqrstuvwxyz123456789";
 		int base = index.length();
 		StringBuilder out = new StringBuilder(base);
 
