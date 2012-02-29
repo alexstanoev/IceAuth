@@ -240,7 +240,6 @@ public class IceAuth extends JavaPlugin {
 			}
 
 			updateIP(player.getName(), player.getAddress().getAddress().getHostAddress(), true);
-			updateIP(player.getName(), player.getAddress().getAddress().getHostAddress());
 
 			player.sendMessage(ChatColor.GREEN + "Registered successfully! You have been logged in.");
 
@@ -295,7 +294,7 @@ public class IceAuth extends JavaPlugin {
 				addAuthPlayer(player);
 
 				if(getIP(playername, true) == null) updateIP(playername, player.getAddress().getAddress().getHostAddress(), true); // Fill in missing register IPs
-				updateIP(playername, player.getAddress().getAddress().getHostAddress());
+				else updateIP(playername, player.getAddress().getAddress().getHostAddress());
 
 				this.getServer().getPluginManager().callEvent(new AuthPlayerLoginEvent(player, false));
 
@@ -886,9 +885,18 @@ public class IceAuth extends JavaPlugin {
 			} else {
 				connection = this.manageSQLite.getConnection();
 			}
-			PreparedStatement regQupd = connection.prepareStatement("UPDATE "+tableName+" SET " + (registerIP ? "registerIP" : "lastIP") + " = ? WHERE "+userField+" = ?");
-			regQupd.setString(1, ip);
-			regQupd.setString(2, nick);
+			PreparedStatement regQupd;
+			if(registerIP) {
+				regQupd = connection.prepareStatement("UPDATE "+tableName+" SET registerIP = ?, lastIP = ? WHERE "+userField+" = ?");
+				regQupd.setString(1, ip);
+				regQupd.setString(2, ip);
+				regQupd.setString(3, nick);
+			} else {
+				regQupd = connection.prepareStatement("UPDATE "+tableName+" SET lastIP = ? WHERE "+userField+" = ?");
+				regQupd.setString(1, ip);
+				regQupd.setString(2, nick);
+			}
+
 			regQupd.executeUpdate();
 		} catch (Exception e) {
 			e.printStackTrace();
