@@ -1116,18 +1116,17 @@ public class IceAuth extends JavaPlugin {
 				String playerName = player.getName();
 				NLIData nli = notLoggedIn.get(playerName);
 				Location pos = nli.getLoc();
+				int secondsSinceLogin = (int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs();
 
-				if((int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs() > 60) {
+				if(secondsSinceLogin > 60) {
 					player.kickPlayer("You took too long to log in!");
 					System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
 					continue;
 				}
 
-				player.teleport(pos);
+				if(secondsSinceLogin > 2) player.teleport(pos); // ignore teleports for 2 seconds to try and work around the Hacking? kick
 
-				if(msgLogin) {
-					msgPlayerLogin(player);
-				}
+				if(msgLogin) msgPlayerLogin(player);
 			} else {
 				if(msgLogin && useReferrals) {
 					// There has to be a better place for this
