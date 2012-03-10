@@ -1,6 +1,5 @@
 package eu.icecraft.iceauth;
 
-import org.bukkit.GameMode;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -81,7 +80,7 @@ public class IceAuthPlayerListener implements Listener {
 
 		plugin.msgPlayerLogin(player, true);
 
-		player.setGameMode(GameMode.SURVIVAL);
+		//player.setGameMode(GameMode.SURVIVAL); removed due to exploit issues
 
 		player.getInventory().clear();
 		player.getInventory().setHelmet(null);

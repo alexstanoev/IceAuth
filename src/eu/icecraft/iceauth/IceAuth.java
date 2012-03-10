@@ -245,8 +245,9 @@ public class IceAuth extends JavaPlugin {
 
 			restoreInv(player);
 
-			NLIData nli = notLoggedIn.get(player.getName());
-			player.setGameMode(nli.getGameMode());
+			// removed due to exploitation issues
+			//NLIData nli = notLoggedIn.get(player.getName());
+			//player.setGameMode(nli.getGameMode());
 
 			delPlayerNotLoggedIn(player);
 			addAuthPlayer(player);
@@ -287,8 +288,9 @@ public class IceAuth extends JavaPlugin {
 
 				restoreInv(player);
 
-				NLIData nli = notLoggedIn.get(playername);
-				player.setGameMode(nli.getGameMode());
+				// removed due to exploitation issues
+				//NLIData nli = notLoggedIn.get(playername);
+				//player.setGameMode(nli.getGameMode());
 
 				delPlayerNotLoggedIn(player);
 				addAuthPlayer(player);
@@ -1110,39 +1112,44 @@ public class IceAuth extends JavaPlugin {
 
 	public void tpPlayers(boolean msgLogin) {
 		startTiming();
-		for (Player player : this.getServer().getOnlinePlayers()) {
-			if(player == null) continue;
-			if(!checkAuth(player)) {
-				String playerName = player.getName();
-				NLIData nli = notLoggedIn.get(playerName);
-				Location pos = nli.getLoc();
-				int secondsSinceLogin = (int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs();
+		try {
+			for (Player player : this.getServer().getOnlinePlayers()) {
+				if(player == null) continue;
+				if(!checkAuth(player)) {
+					String playerName = player.getName();
+					NLIData nli = notLoggedIn.get(playerName);
+					Location pos = nli.getLoc();
+					int secondsSinceLogin = (int) (System.currentTimeMillis() / 1000L) - nli.getLoggedSecs();
 
-				if(secondsSinceLogin > 60) {
-					player.kickPlayer("You took too long to log in!");
-					System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
-					continue;
-				}
+					if(secondsSinceLogin > 60) {
+						player.kickPlayer("You took too long to log in!");
+						System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
+						continue;
+					}
 
-				if(secondsSinceLogin > 2) player.teleport(pos); // ignore teleports for 2 seconds to try and work around the Hacking? kick
+					if(secondsSinceLogin > 2) player.teleport(pos); // ignore teleports for 2 seconds to try and work around the Hacking? kick
 
-				if(msgLogin) msgPlayerLogin(player);
-			} else {
-				if(msgLogin && useReferrals) {
-					// There has to be a better place for this
-					LoggedInPlayer lp = playersLoggedIn.get(player.getName());
-					if(lp.isReferred()) {
-						int playTime = Math.round(lp.getOnlineTime() + (((int)(System.currentTimeMillis()/1000L) - lp.getLoggedInAt())));
-						if(playTime >= 4*60*60) {
-							ref.rewardPlayer(player, lp.getReferredBy());
-							markPlayerPaid(player);
-							lp.setReferred(false);
-							playersLoggedIn.put(player.getName(), lp);
-							System.out.println("[IceAuth Referrals] Rewarded player: "+player.getName() + ", referred by: " + lp.getReferredBy());
+					if(msgLogin) msgPlayerLogin(player);
+				} else {
+					if(msgLogin && useReferrals) {
+						// There has to be a better place for this
+						LoggedInPlayer lp = playersLoggedIn.get(player.getName());
+						if(lp.isReferred()) {
+							int playTime = Math.round(lp.getOnlineTime() + (((int)(System.currentTimeMillis()/1000L) - lp.getLoggedInAt())));
+							if(playTime >= 4*60*60) {
+								ref.rewardPlayer(player, lp.getReferredBy());
+								markPlayerPaid(player);
+								lp.setReferred(false);
+								playersLoggedIn.put(player.getName(), lp);
+								System.out.println("[IceAuth Referrals] Rewarded player: "+player.getName() + ", referred by: " + lp.getReferredBy());
+							}
 						}
 					}
 				}
 			}
+		} catch(Exception ex) {
+			// we don't want the task to die
+			ex.printStackTrace();
 		}
 		IceAuth.syncTaskTime += stopTiming();
 	}
