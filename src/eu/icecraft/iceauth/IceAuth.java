@@ -33,7 +33,7 @@ import eu.icecraft.iceauth.configCompat.Configuration;
 
 public class IceAuth extends JavaPlugin {
 	public String logPrefix = "[IceAuth] ";
-	public Logger log = Logger.getLogger("Minecraft");
+	public Logger nativeLogger = Logger.getLogger("Minecraft");
 	private Configuration conf;
 
 	public mysqlCore manageMySQL;
@@ -47,6 +47,7 @@ public class IceAuth extends JavaPlugin {
 
 	public boolean hideChatNonLogged = true;
 	public boolean useReferrals = false;
+	public boolean noCreativeWorld = true;
 
 	public boolean MySQL = false;
 	public String dbHost;
@@ -67,6 +68,7 @@ public class IceAuth extends JavaPlugin {
 	public static long sqlQueryTime;
 	public static long syncTaskTime;
 
+	public static BufferedLogger bufferedLogger;
 	public MessageDigest md5;
 	public NLICacheHandler nch;
 	public Referrals ref;
@@ -74,6 +76,7 @@ public class IceAuth extends JavaPlugin {
 	@Override
 	public void onDisable() {
 		this.getServer().getScheduler().cancelTasks(this);
+		bufferedLogger.disable();
 		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " was disabled!");
 	}
 
@@ -82,6 +85,9 @@ public class IceAuth extends JavaPlugin {
 		startTiming();
 
 		if(!this.getDataFolder().exists()) this.getDataFolder().mkdir();
+
+		bufferedLogger = new BufferedLogger(new File(this.getDataFolder(), "log.txt"), 5);
+
 		File confFile = new File(this.getDataFolder(), "config.yml");
 		conf = new Configuration(confFile);
 		if(!confFile.exists()) {
@@ -107,6 +113,8 @@ public class IceAuth extends JavaPlugin {
 			conf.setProperty("referrals.enable", false);
 			conf.setProperty("referrals.items", defaultKit);
 
+			conf.setProperty("no-creative-world", true);
+
 			conf.save();
 		}
 
@@ -127,6 +135,7 @@ public class IceAuth extends JavaPlugin {
 		this.hideChatNonLogged = conf.getBoolean("hideChatNonLogged", true);
 		this.useReferrals = conf.getBoolean("referrals.enable", false);
 		if(useReferrals) this.referralKit = conf.getStringList("referrals.items", null);
+		this.noCreativeWorld = conf.getBoolean("no-creative-world", true);
 
 		World world = this.getServer().getWorlds().get(0);
 		try {
@@ -142,28 +151,28 @@ public class IceAuth extends JavaPlugin {
 		}
 
 		if (this.MySQL) {
-			if (this.dbHost.equals(null)) { this.MySQL = false; this.log.severe(this.logPrefix + "MySQL is on, but host is not defined, defaulting to SQLite"); }
-			if (this.dbUser.equals(null)) { this.MySQL = false; this.log.severe(this.logPrefix + "MySQL is on, but username is not defined, defaulting to SQLite"); }
-			if (this.dbPass.equals(null)) { this.MySQL = false; this.log.severe(this.logPrefix + "MySQL is on, but password is not defined, defaulting to SQLite"); }
-			if (this.dbDatabase.equals(null)) { this.MySQL = false; this.log.severe(this.logPrefix + "MySQL is on, but database is not defined, defaulting to SQLite"); }
+			if (this.dbHost.equals(null)) { this.MySQL = false; this.nativeLogger.severe(this.logPrefix + "MySQL is on, but host is not defined, defaulting to SQLite"); }
+			if (this.dbUser.equals(null)) { this.MySQL = false; this.nativeLogger.severe(this.logPrefix + "MySQL is on, but username is not defined, defaulting to SQLite"); }
+			if (this.dbPass.equals(null)) { this.MySQL = false; this.nativeLogger.severe(this.logPrefix + "MySQL is on, but password is not defined, defaulting to SQLite"); }
+			if (this.dbDatabase.equals(null)) { this.MySQL = false; this.nativeLogger.severe(this.logPrefix + "MySQL is on, but database is not defined, defaulting to SQLite"); }
 		}
 
 		if (this.MySQL) {
 
-			this.manageMySQL = new mysqlCore(this.log, this.logPrefix, this.dbHost, this.dbDatabase, this.dbUser, this.dbPass);
+			this.manageMySQL = new mysqlCore(this.nativeLogger, this.logPrefix, this.dbHost, this.dbDatabase, this.dbUser, this.dbPass);
 
-			this.log.info(this.logPrefix + "MySQL Initializing");
+			this.nativeLogger.info(this.logPrefix + "MySQL Initializing");
 
 			this.manageMySQL.initialize();
 
 			try {
 				if (this.manageMySQL.checkConnection()) {
-					this.log.info(this.logPrefix + "MySQL connection successful");
+					this.nativeLogger.info(this.logPrefix + "MySQL connection successful");
 					if (!this.manageMySQL.checkTable(tableName)) {
 						this.MySQL = false;
 					}
 				} else {
-					this.log.severe(this.logPrefix + "MySQL connection failed. Defaulting to SQLite");
+					this.nativeLogger.severe(this.logPrefix + "MySQL connection failed. Defaulting to SQLite");
 					this.MySQL = false;
 					this.tableName = "auth";
 					this.userField = "username";
@@ -173,9 +182,9 @@ public class IceAuth extends JavaPlugin {
 				e.printStackTrace();
 			}
 		} else {
-			this.log.info(this.logPrefix + "SQLite Initializing");
+			this.nativeLogger.info(this.logPrefix + "SQLite Initializing");
 
-			this.manageSQLite = new sqlCore(this.log, this.logPrefix, "IceAuth", this.getDataFolder().getPath());
+			this.manageSQLite = new sqlCore(this.nativeLogger, this.logPrefix, "IceAuth", this.getDataFolder().getPath());
 
 			this.tableName = "auth";
 			this.userField = "username";
@@ -289,8 +298,10 @@ public class IceAuth extends JavaPlugin {
 				restoreInv(player);
 
 				// removed due to exploitation issues
-				//NLIData nli = notLoggedIn.get(playername);
+				NLIData nli = notLoggedIn.get(playername);
 				//player.setGameMode(nli.getGameMode());
+
+				player.teleport(nli.getLoc());
 
 				delPlayerNotLoggedIn(player);
 				addAuthPlayer(player);
@@ -303,7 +314,7 @@ public class IceAuth extends JavaPlugin {
 				return true;
 			} else {
 				player.sendMessage(ChatColor.RED + "Wrong password!");
-				System.out.println("[IceAuth] Player "+player.getName()+" tried logging in with a wrong password!");
+				log("Player "+player.getName()+" tried logging in with a wrong password!");
 				return false;
 			}
 		}
@@ -591,7 +602,7 @@ public class IceAuth extends JavaPlugin {
 			invstackbackup = nli.getInventory();
 			armStackBackup = nli.getArmour();
 		} catch(Exception e) {
-			System.out.println("[IceAuth] Restoring inventory failed for player " + player.getName());
+			log("Restoring inventory failed for player " + player.getName());
 			e.printStackTrace();
 			return;
 		}
@@ -629,6 +640,14 @@ public class IceAuth extends JavaPlugin {
 		digest = md5.digest();
 
 		return String.format("%0" + (digest.length << 1) + "x", new BigInteger(1, digest));
+	}
+
+	public static void log(String what) {
+		log(what, "INFO");
+	}
+
+	public static void log(String what, String prefix) {
+		bufferedLogger.log("["+prefix+"] " + what);
 	}
 
 	public boolean isRegistered(String name) {
@@ -743,7 +762,7 @@ public class IceAuth extends JavaPlugin {
 			IceAuth.sqlQueryTime += stopTiming();
 			IceAuth.sqlQueries++;
 
-			System.out.println("[IceAuth] Player "+name+" registered sucessfully.");
+			log("Player "+name+" registered sucessfully.");
 
 			notRegistered.remove(name);
 
@@ -781,7 +800,7 @@ public class IceAuth extends JavaPlugin {
 				IceAuth.sqlQueries++;
 
 				player.sendMessage(ChatColor.GREEN + "Password updated sucessfully!");
-				System.out.println("[IceAuth] Player "+player.getName()+" changed his password!");
+				log("Player "+player.getName()+" changed his password!");
 				return true;
 
 			} catch (SQLException e) {
@@ -790,7 +809,7 @@ public class IceAuth extends JavaPlugin {
 
 		} else {
 			player.sendMessage(ChatColor.RED + "Wrong password!");
-			System.out.println("[IceAuth] Player "+player.getName()+" tried changepassword with a wrong password!");
+			log("Player "+player.getName()+" tried changepassword with a wrong password!");
 			return true;
 		}
 
@@ -1123,7 +1142,7 @@ public class IceAuth extends JavaPlugin {
 
 					if(secondsSinceLogin > 60) {
 						player.kickPlayer("You took too long to log in!");
-						System.out.println("[IceAuth] Player "+playerName+" took too long to log in");
+						log("Player "+playerName+" took too long to log in");
 						continue;
 					}
 
@@ -1141,7 +1160,7 @@ public class IceAuth extends JavaPlugin {
 								markPlayerPaid(player);
 								lp.setReferred(false);
 								playersLoggedIn.put(player.getName(), lp);
-								System.out.println("[IceAuth Referrals] Rewarded player: "+player.getName() + ", referred by: " + lp.getReferredBy());
+								log("[IceAuth Referrals] Rewarded player: "+player.getName() + ", referred by: " + lp.getReferredBy());
 							}
 						}
 					}
@@ -1150,6 +1169,7 @@ public class IceAuth extends JavaPlugin {
 		} catch(Exception ex) {
 			// we don't want the task to die
 			ex.printStackTrace();
+			log(ex.getMessage(), "EXCEPTION");
 		}
 		IceAuth.syncTaskTime += stopTiming();
 	}

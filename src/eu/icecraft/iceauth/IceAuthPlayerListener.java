@@ -1,5 +1,8 @@
 package eu.icecraft.iceauth;
 
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.World;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -7,6 +10,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
+
+import static eu.icecraft.iceauth.IceAuth.log;
 
 public class IceAuthPlayerListener implements Listener {
 	private IceAuth plugin;
@@ -62,8 +67,8 @@ public class IceAuthPlayerListener implements Listener {
 
 		boolean regged = plugin.isRegistered(player.getName());
 
-		if(player.getHealth() <= 0) {
-			player.teleport(player.getWorld().getSpawnLocation());
+		if(player.getHealth() <= 0 && player.getGameMode() == GameMode.SURVIVAL) {
+			player.teleport(Bukkit.getServer().getWorlds().get(0).getSpawnLocation());
 		} else {
 			if(plugin.checkInvEmpty(player.getInventory().getContents()) && !plugin.isInvCacheEmpty(player.getName())) {
 				plugin.restoreInv(player, true);
@@ -82,11 +87,22 @@ public class IceAuthPlayerListener implements Listener {
 
 		//player.setGameMode(GameMode.SURVIVAL); removed due to exploit issues
 
+		if(plugin.noCreativeWorld && !player.isOp() && player.getGameMode() == GameMode.CREATIVE) {
+			World w = player.getLocation().getWorld();
+			if(w.equals(Bukkit.getServer().getWorld("world")) 
+					|| w.equals(Bukkit.getServer().getWorld("world_nether"))
+					|| w.equals(Bukkit.getServer().getWorld("skylands"))) {
+				log("Player " + player.getName() + " logged in at " + w.getName() + " with CREATIVE gamemode! Resetting.", "NOAUTHSEVERE");
+				player.setGameMode(GameMode.SURVIVAL);
+			}
+		}
+
 		player.getInventory().clear();
 		player.getInventory().setHelmet(null);
 		player.getInventory().setChestplate(null);
 		player.getInventory().setLeggings(null);
 		player.getInventory().setBoots(null);
+
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR)
@@ -140,6 +156,18 @@ public class IceAuthPlayerListener implements Listener {
 
 		event.setMessage("/notloggedin");
 		event.setCancelled(true);
+	}
+
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onCrossWorldTeleport(PlayerTeleportEvent event) {
+		if (event.isCancelled()) return;
+		if(event.getTo().getWorld().equals(event.getFrom().getWorld())) return; // could be an IceAuth teleport
+		Player player = event.getPlayer();
+		if (!plugin.checkAuth(player)) {
+			log("Player " + player.getName() + " (in " + player.getGameMode() + ") tried to teleport from " + event.getFrom().getWorld().getName() + " to " + event.getTo().getWorld().getName() + " while not authed!", "NOAUTH");
+			event.setTo(event.getFrom());
+			event.setCancelled(true);
+		}
 	}
 
 	@EventHandler(priority = EventPriority.LOWEST)
