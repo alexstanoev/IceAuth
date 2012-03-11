@@ -24,6 +24,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.alta189.sqlLibrary.MySQL.mysqlCore;
@@ -216,7 +217,7 @@ public class IceAuth extends JavaPlugin {
 		this.getServer().getPluginManager().registerEvents(blockListener, this);
 		this.getServer().getPluginManager().registerEvents(entityListener, this);
 
-		this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new PlayerSyncThread(), 40, 40);
+		this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new PlayerSyncThread(), 25, 25);
 
 		int registeredUsers = registeredUsers();
 
@@ -534,12 +535,14 @@ public class IceAuth extends JavaPlugin {
 		playersLoggedIn.remove(pName);
 		notLoggedIn.remove(pName);	
 		notRegistered.remove(pName);
+		player.removeMetadata("notLoggedIn", this);
 	}
 
 	public void addPlayerNotLoggedIn(Player player, Location loc, boolean registered) {
 		NLIData nli = new NLIData(loc, (int) (System.currentTimeMillis() / 1000L), player.getInventory().getContents(), player.getInventory().getArmorContents(), player.getGameMode());
 		notLoggedIn.put(player.getName(), nli);
 		if(!registered) notRegistered.add(player.getName());
+		player.setMetadata("notLoggedIn", new FixedMetadataValue(this, true));
 	}
 
 	public void saveInventory(Player player) {
@@ -550,6 +553,7 @@ public class IceAuth extends JavaPlugin {
 	public void delPlayerNotLoggedIn(Player player) {
 		notLoggedIn.remove(player.getName());	
 		notRegistered.remove(player.getName());
+		player.removeMetadata("notLoggedIn", this);
 	}
 
 	public void msgPlayerLogin(Player player) {
