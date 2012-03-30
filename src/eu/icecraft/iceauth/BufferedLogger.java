@@ -1,8 +1,6 @@
 package eu.icecraft.iceauth;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
 
 public class BufferedLogger {
@@ -38,7 +36,7 @@ public class BufferedLogger {
 
 	public void load(File logPath) {
 		try {
-			theWriter = new PrintWriter(logPath);
+			theWriter = new PrintWriter(new FileWriter(logPath, true));
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
