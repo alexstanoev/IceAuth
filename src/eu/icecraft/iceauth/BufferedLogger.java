@@ -38,7 +38,7 @@ public class BufferedLogger {
 
 	public void load(File logPath) {
 		try {
-			theWriter = new PrintWriter(logPath);
+			theWriter = new PrintWriter(logPath, true);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
