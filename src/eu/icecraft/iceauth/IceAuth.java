@@ -87,7 +87,7 @@ public class IceAuth extends JavaPlugin {
 
 		if(!this.getDataFolder().exists()) this.getDataFolder().mkdir();
 
-		bufferedLogger = new BufferedLogger(new File(this.getDataFolder(), "log.txt"), 5);
+		bufferedLogger = new BufferedLogger(new File(this.getDataFolder(), "log.txt"), 2);
 
 		File confFile = new File(this.getDataFolder(), "config.yml");
 		conf = new Configuration(confFile);
