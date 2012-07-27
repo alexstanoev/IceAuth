@@ -49,6 +49,7 @@ public class IceAuth extends JavaPlugin {
 	public boolean hideChatNonLogged = true;
 	public boolean useReferrals = false;
 	public boolean noCreativeWorld = true;
+	public int maxUsersOnIP = 5;
 
 	public boolean MySQL = false;
 	public String dbHost;
@@ -116,6 +117,8 @@ public class IceAuth extends JavaPlugin {
 
 			conf.setProperty("no-creative-world", true);
 
+			conf.setProperty("maxUsersOnIP", 5);
+
 			conf.save();
 		}
 
@@ -137,6 +140,8 @@ public class IceAuth extends JavaPlugin {
 		this.useReferrals = conf.getBoolean("referrals.enable", false);
 		if(useReferrals) this.referralKit = conf.getStringList("referrals.items", null);
 		this.noCreativeWorld = conf.getBoolean("no-creative-world", true);
+
+		this.maxUsersOnIP = conf.getInt("maxUsersOnIP", 5);
 
 		World world = this.getServer().getWorlds().get(0);
 		try {
@@ -219,10 +224,8 @@ public class IceAuth extends JavaPlugin {
 
 		this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new PlayerSyncThread(), 25, 25);
 
-		int registeredUsers = registeredUsers();
-
 		int timeToStart = Math.round(stopTiming() / 1000);
-		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " has been enabled in " + timeToStart + "ms. Loaded " + registeredUsers + " users.");
+		System.out.println(this.getDescription().getName() + " " + this.getDescription().getVersion() + " has been enabled in " + timeToStart + "ms.");
 	}
 
 	@Override
@@ -233,6 +236,7 @@ public class IceAuth extends JavaPlugin {
 			}
 
 			Player player = (Player) sender;
+
 			if(!checkUnReg(player)) {
 				player.sendMessage(ChatColor.RED + "Already registered.");
 				return false;
@@ -242,6 +246,14 @@ public class IceAuth extends JavaPlugin {
 				return false;
 			}
 
+			String ip = player.getAddress().getAddress().getHostAddress();
+
+			if(usersOnIP(ip) > maxUsersOnIP) {
+				player.sendMessage(ChatColor.RED + "You have exceeded the maximum limit for accounts on your IP ("+maxUsersOnIP+")!");
+				log("Player "+player.getName()+" tried to register more than the allowed ammount of accounts on IP " + ip, "WARN");
+				return true;
+			}
+
 			String password = args[0];
 
 			if(!register(player.getName(), password)) {
@@ -249,7 +261,7 @@ public class IceAuth extends JavaPlugin {
 				return false;
 			}
 
-			updateIP(player.getName(), player.getAddress().getAddress().getHostAddress(), true);
+			updateIP(player.getName(), ip, true);
 
 			player.sendMessage(ChatColor.GREEN + "Registered successfully! You have been logged in.");
 
@@ -820,7 +832,7 @@ public class IceAuth extends JavaPlugin {
 		return false;
 	}
 
-	public int registeredUsers() {
+	public int usersOnIP(String ip) {
 
 		ResultSet result = null;
 
@@ -838,7 +850,8 @@ public class IceAuth extends JavaPlugin {
 
 		try {
 			startTiming();
-			PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) AS c FROM "+tableName);
+			PreparedStatement regQ = connection.prepareStatement("SELECT COUNT(*) AS c FROM "+tableName+" WHERE registerIP = ?");
+			regQ.setString(1, ip);
 			result = regQ.executeQuery();
 			IceAuth.sqlQueryTime += stopTiming();
 			IceAuth.sqlQueries++;
