@@ -8,8 +8,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -248,8 +251,8 @@ public class IceAuth extends JavaPlugin {
 
 			String ip = player.getAddress().getAddress().getHostAddress();
 
-			if(usersOnIP(ip) > maxUsersOnIP) {
-				player.sendMessage(ChatColor.RED + "You have exceeded the maximum limit for accounts on your IP ("+maxUsersOnIP+")!");
+			if(usersOnIP(ip) >= maxUsersOnIP) {
+				player.sendMessage(ChatColor.RED + "You have exceeded the maximum limit for accounts on your IP!");
 				log("Player "+player.getName()+" tried to register more than the allowed ammount of accounts on IP " + ip, "WARN");
 				return true;
 			}
@@ -274,7 +277,7 @@ public class IceAuth extends JavaPlugin {
 			delPlayerNotLoggedIn(player);
 			addAuthPlayer(player);
 
-			ref.onRegister(player);
+			if(ref != null) ref.onRegister(player);
 
 			this.getServer().getPluginManager().callEvent(new AuthPlayerLoginEvent(player, true));
 
@@ -663,7 +666,8 @@ public class IceAuth extends JavaPlugin {
 	}
 
 	public static void log(String what, String prefix) {
-		bufferedLogger.log("["+prefix+"] " + what);
+		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+		bufferedLogger.log(dateFormat.format(new Date()) +" ["+prefix+"] " + what);
 	}
 
 	public boolean isRegistered(String name) {
